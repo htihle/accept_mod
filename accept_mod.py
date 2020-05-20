@@ -235,7 +235,7 @@ def get_scan_stats(filepath):
             tod_ind = np.array(my_file['tod'][:])
             n_det_ind, n_sb, n_freq, n_samp = tod_ind.shape
             sb_mean_ind = np.array(my_file['sb_mean'][:])
-            point_feed1 = np.array(my_file['point_tel'][0, :])
+            point_tel_ind = np.array(my_file['point_tel'][:])
             point_radec = np.array(my_file['point_cel'][0, :])
             mask_ind = my_file['freqmask'][:]
             mask_full_ind = my_file['freqmask_full'][:]
@@ -325,6 +325,7 @@ def get_scan_stats(filepath):
     sigma0 = np.zeros((n_det, n_sb, n_freq))
     point_amp = np.zeros((n_det, n_sb, n_freq_hr, 2))
     tod_poly = np.zeros((n_det, n_sb, 2, n_samp))
+    point_tel = np.zeros((n_det, n_samp, 3))
 
     tod[pixels] = tod_ind
     mask[pixels] = mask_ind
@@ -339,6 +340,7 @@ def get_scan_stats(filepath):
     sigma0[pixels] = sigma0_ind
     point_amp[pixels] = point_amp_ind
     tod_poly[pixels] = tod_poly_ind
+    point_tel[pixels] = point_tel_ind
 
     az_amp = point_amp[:, :, :, 1]
     el_amp = point_amp[:, :, :, 0]
@@ -390,8 +392,13 @@ def get_scan_stats(filepath):
     close_to_night = np.minimum(np.abs(2.0 - hours), np.abs(26.0 - hours))
     insert_data_in_array(data, close_to_night, 'night')
 
-    # Mean az/el (we could in principle do this per feed)
-    mean_az, mean_el = np.mean(point_feed1[:, :2], axis=0)
+    # Mean az/el per feed
+    mean_el = np.zeros((n_det, n_sb))
+    mean_az = np.zeros((n_det, n_sb))
+
+    mean_az[:, :] = np.mean(point_tel[:, :, 0], axis=1)[:, None]
+    mean_el[:, :] = np.mean(point_tel[:, :, 1], axis=1)[:, None]
+
     insert_data_in_array(data, mean_az, 'az')
     insert_data_in_array(data, mean_el, 'el')
 
@@ -415,15 +422,15 @@ def get_scan_stats(filepath):
     full_az_chi2[:] = np.nan
     max_az_chi2[:] = np.nan
     med_az_chi2[:] = np.nan
-    az = point_feed1[:, 0]
+    az = point_tel[:, :, 0]
     for i in range(n_det):
         for j in range(n_sb):
             if acc[i, j]:
                 freq_chi2 = np.zeros(n_freq)
                 for k in range(n_freq):
                     if mask[i, j, k] == 1.0:
-                        histsum, bins = np.histogram(az, bins=nbins, weights=(tod[i, j, k]/sigma0[i,j,k]))
-                        nhit = np.histogram(az, bins=nbins)[0]
+                        histsum, bins = np.histogram(az[i], bins=nbins, weights=(tod[i, j, k]/sigma0[i,j,k]))
+                        nhit = np.histogram(az[i], bins=nbins)[0]
                         normhist = histsum / nhit * np.sqrt(nhit)
 
                         # if i == 15 and j == 3 and k == 24:
@@ -845,3 +852,7 @@ if __name__ == "__main__":
         plt.legend()
         plt.tight_layout()
         plt.show()
+
+
+#### TODO:
+## add elevation of individual feeds
