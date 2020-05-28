@@ -22,7 +22,6 @@ stats_list = [
     'weather',       # probability of bad weather
     'kurtosis',      # kurtosis of timestreams
     'skewness',      # skewness of timestreams
-    'ps_chi2',       # (signed) chi2 of spherically averaged power spectrum for sb
     'scan_length',   # length of scan in minutes
     'saddlebag',     # saddlebag number (1-4)
     'sigma_poly0',   # sigma of mean in poly filter
@@ -43,5 +42,11 @@ stats_list = [
     'winddir',       # hk: azimut from where wind is blowing, deg 
     'windspeed',     # hk: windspeed m/s
     'moon_dist',     # distance to the moon in deg
-    'sun_dist'       # distance to the sun in deg
+    'sun_dist',      # distance to the sun in deg
+    'ps_s_sb_chi2',  # ps_chi for single sb single scan (previously ps_chi2)
+    'ps_s_feed_chi2',# ps_chi for single feed single scan 
+    'ps_s_chi2',     # ps_chi combining all feeds for single scan 
+    'ps_o_sb_chi2',  # ps_chi for single sb full obsid 
+    'ps_o_feed_chi2',# ps_chi for single feed full obsid  
+    'ps_o_chi2',     # ps_chi combining all feeds for full obsid  
 ]

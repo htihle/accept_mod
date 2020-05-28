@@ -23,7 +23,6 @@ stats_cut = {
     'weather': [0.0, 0.25],
     'kurtosis': [-0.02, 0.02],
     'skewness': [-0.015, 0.015],
-    'ps_chi2': [-10.0, 5.0],
     'scan_length': [2.0, 15.0],
     'saddlebag': [0.0, 5.0],
     'sigma_poly0': [1e-7, 1e-1],
@@ -44,5 +43,11 @@ stats_cut = {
     'winddir': [0, 360],
     'windspeed': [0, 20],
     'moon_dist': [30, 180],
-    'sun_dist': [30, 180]
+    'sun_dist': [30, 180],
+    'ps_s_sb_chi2': [-10.0, 5.0],
+    'ps_s_feed_chi2': [-10.0, 5.0],
+    'ps_s_chi2': [-10.0, 5.0],
+    'ps_o_sb_chi2': [-10.0, 5.0],
+    'ps_o_feed_chi2': [-10.0, 5.0],
+    'ps_o_chi2': [-10.0, 5.0],
 }

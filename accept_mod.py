@@ -77,10 +77,14 @@ def get_spike_list(sb_mean, sd, scan_id, mjd):
 def make_map(ra, dec, ra_bins, dec_bins, tod, mask):
     n_freq, n_samp = tod.shape
 
-    n_pix = len(ra_bins) - 1
-
-    map = np.zeros((n_pix, n_pix, n_freq))
-    nhit = np.zeros((n_pix, n_pix, n_freq))
+    # print(ra_bins)
+    # print(dec_bins)
+    # print(ra.shape)
+    # print(dec.shape)
+    n_pix_ra = len(ra_bins) - 1
+    n_pix_dec = len(dec_bins) - 1
+    map = np.zeros((n_pix_ra, n_pix_dec, n_freq))
+    nhit = np.zeros_like(map)
     for i in range(n_freq):
         if mask[i] == 1.0:
             nhit[:, :, i] = np.histogram2d(ra, dec, bins=[ra_bins, dec_bins])[0]
@@ -211,10 +215,13 @@ def read_runlist(params):
     return fields
 
 
-def insert_data_in_array(data, indata, stats_string):
+def insert_data_in_array(data, indata, stats_string, obsid=False):
     try:
         index = stats_list.index(stats_string)
-        data[:,:, index] = indata
+        if obsid:
+            data[:, :, :, index] = indata
+        else:
+            data[:, :, index] = indata
     except ValueError:
         print('Did not find statistic "' + stats_string + '" in stats list.')
 
@@ -228,7 +235,7 @@ def extract_data_from_array(data, stats_string):
         print('Did not find statistic "' + stats_string + '" in stats list.')
         return 0
 
-def get_scan_stats(filepath):
+def get_scan_stats(filepath, map_grid=None):
     n_stats = len(stats_list)
     try:
         with h5py.File(filepath, mode="r") as my_file:
@@ -236,7 +243,7 @@ def get_scan_stats(filepath):
             n_det_ind, n_sb, n_freq, n_samp = tod_ind.shape
             sb_mean_ind = np.array(my_file['sb_mean'][:])
             point_tel_ind = np.array(my_file['point_tel'][:])
-            point_radec = np.array(my_file['point_cel'][0, :])
+            point_radec_ind = np.array(my_file['point_cel'][:])
             mask_ind = my_file['freqmask'][:]
             mask_full_ind = my_file['freqmask_full'][:]
             reason_ind = my_file['freqmask_reason'][:]
@@ -326,6 +333,7 @@ def get_scan_stats(filepath):
     point_amp = np.zeros((n_det, n_sb, n_freq_hr, 2))
     tod_poly = np.zeros((n_det, n_sb, 2, n_samp))
     point_tel = np.zeros((n_det, n_samp, 3))
+    point_radec = np.zeros((n_det, n_samp, 3))
 
     tod[pixels] = tod_ind
     mask[pixels] = mask_ind
@@ -341,6 +349,7 @@ def get_scan_stats(filepath):
     point_amp[pixels] = point_amp_ind
     tod_poly[pixels] = tod_poly_ind
     point_tel[pixels] = point_tel_ind
+    point_radec[pixels] = point_radec_ind
 
     az_amp = point_amp[:, :, :, 1]
     el_amp = point_amp[:, :, :, 0]
@@ -427,7 +436,7 @@ def get_scan_stats(filepath):
         for j in range(n_sb):
             if acc[i, j]:
                 freq_chi2 = np.zeros(n_freq)
-                for k in range(n_freq):
+                for k in range(n_freq): 
                     if mask[i, j, k] == 1.0:
                         histsum, bins = np.histogram(az[i], bins=nbins, weights=(tod[i, j, k]/sigma0[i,j,k]))
                         nhit = np.histogram(az[i], bins=nbins)[0]
@@ -512,27 +521,48 @@ def get_scan_stats(filepath):
     insert_data_in_array(data, skewness, 'skewness')
 
     # ps_chi2
-    ra = point_radec[:, 0]
-    dec = point_radec[:, 1]
+    ra = point_radec[:, :, 0]
+    dec = point_radec[:, :, 1]
 
-    centre = [(np.max(ra) + np.min(ra)) / 2, (np.max(dec) + np.min(dec)) / 2]
+    # centre = [(np.max(ra) + np.min(ra)) / 2, (np.max(dec) + np.min(dec)) / 2]
 
-    d_dec = 8.0 / 60 
-    d_ra = d_dec / np.cos(centre[1] / 180 * np.pi) # arcmin
+    # d_dec = 8.0 / 60 
+    # d_ra = d_dec / np.cos(centre[1] / 180 * np.pi) # arcmin
 
 
-    n_pix = 16
+    # n_pix = 16
 
-    ra_bins = np.linspace(centre[0] - d_ra * n_pix / 2, centre[0] + d_ra * n_pix / 2, n_pix + 1)
-    dec_bins = np.linspace(centre[1] - d_dec * n_pix / 2, centre[1] + d_dec * n_pix / 2, n_pix + 1)
+    # ra_bins = np.linspace(centre[0] - d_ra * n_pix / 2, centre[0] + d_ra * n_pix / 2, n_pix + 1)
+    # dec_bins = np.linspace(centre[1] - d_dec * n_pix / 2, centre[1] + d_dec * n_pix / 2, n_pix + 1)
+    indices = np.zeros((n_det, 2, 2)).astype(int)
     ps_chi2 = np.zeros((n_det, n_sb))
     ps_chi2[:] = np.nan 
+    map_list = [[None for _ in range(n_sb)] for _ in range(n_det)]
     for i in range(n_det):
-        for j in range(n_sb):
+        indices[i, 0, :] = np.digitize((np.min(ra[i]), np.max(ra[i])), map_grid[0])
+        indices[i, 1, :] = np.digitize((np.min(dec[i]), np.max(dec[i])), map_grid[1])
+        # print(indices[0])
+        # print(ra)
+        # print((np.min(ra[i]), np.max(ra[i])))
+        # print((np.min(dec[i]), np.max(dec[i])))
+        # print(map_grid)
+        ra_bins = map_grid[0][indices[i, 0, 0] - 1:indices[i, 0, 1] + 1]
+        dec_bins = map_grid[1][indices[i, 1, 0] - 1:indices[i, 1, 1] + 1]
+        # print(indices[0])
+        # print(map_grid)
+        # print(ra_bins)
+        # print(dec_bins)
+        # sys.exit()
+        for j in range(n_sb): ### should not need to be done per sideband.
             if acc[i, j]:
-                ps_chi2[i, j], Pk, ps_mean, ps_std, transfer = get_sb_ps(ra, dec, ra_bins, dec_bins, tod[i, j], mask[i, j], sigma0[i, j], d_dec)
+                map, nhit = make_map(ra[i], dec[i], ra_bins, dec_bins, tod[i, j], mask[i, j])
+                where = np.where(nhit > 0)
+                rms = np.zeros_like(nhit)
+                rms[where] = (sigma0[i, j][None, None, :]/ np.sqrt(nhit))[where]
+                map_list[i][j] = [map, rms]
+                #ps_chi2[i, j], Pk, ps_mean, ps_std, transfer = get_sb_ps(ra, dec, ra_bins, dec_bins, tod[i, j], mask[i, j], sigma0[i, j], d_dec)
     
-    insert_data_in_array(data, ps_chi2, 'ps_chi2')
+    #insert_data_in_array(data, ps_chi2, 'ps_chi2')
     
     # add length of scan
     duration = (mjd[-1] - mjd[0]) * 24 * 60  # in minutes
@@ -624,7 +654,7 @@ def get_scan_stats(filepath):
 
     ######## Here you can add new statistics  ##########
 
-    return data
+    return data, [map_list, indices]
 
 def pad_nans(tod):
     n_pad = 10
@@ -688,8 +718,11 @@ def get_noise_params(tod, samprate=50.0):
     #     # 
     return sigma0, fknee, alpha
 
+class ObsidData():
+    def __init__(self):
+        pass
 
-def get_scan_data(params, fields, fieldname, paralellize=True):
+def get_scan_data(params, fields, fieldname, paralellize=False):
     l2_path = params['LEVEL2_DIR']
     field = fields[fieldname]
     n_scans = field[2]
@@ -706,20 +739,275 @@ def get_scan_data(params, fields, fieldname, paralellize=True):
         filepaths = [l2_path + '/' + fieldname + '/' + fieldname + '_0' + scanid + '.h5' for scanid in scanids]
                                                                                                                                                                 
         pool = multiprocessing.Pool(100)                                                                                                                              
-        scan_data[:,:,:,:] = np.array(list(pool.map(get_scan_stats, filepaths)))
+        scan_data[:,:,:,:], _ = np.array(list(pool.map(get_scan_stats, filepaths)))
         scan_list[:] = scanids
     else:
         i_scan = 0
         for obsid in field[0]:
             scans = field[1][obsid]
-            for scanid in scans:
-                filepath = l2_path + '/' + fieldname + '/' + fieldname + '_0' + scanid + '.h5'
-                #filepath = l2_path + '/' + fieldname + '_0' + scanid + '.h5'
-                scan_data[i_scan] = get_scan_stats(filepath)
-                scan_list[i_scan] = int(scanid)
-                i_scan +=1
+            n_scans = len(scans)
+            obsid_info = ObsidData()
+            obsid_info.scans = scans
+            obsid_info.field = fieldname
+            obsid_info.l2_path = l2_path
+            scan_data[i_scan:i_scan+n_scans] = get_obsid_data(obsid_info)
+            scan_list[i_scan:i_scan+n_scans] = scans
+            i_scan += n_scans
+            # for scanid in scans:
+            #     filepath = l2_path + '/' + fieldname + '/' + fieldname + '_0' + scanid + '.h5'
+            #     #filepath = l2_path + '/' + fieldname + '_0' + scanid + '.h5'
+            #     scan_data[i_scan] = get_scan_stats(filepath)
+            #     scan_list[i_scan] = int(scanid)
+            #     i_scan +=1
     return scan_list, scan_data
 
+
+def get_obsid_data(obsid_info):
+    scans = obsid_info.scans
+    fieldname = obsid_info.field
+    l2_path = obsid_info.l2_path
+    
+    ## set up map grid
+    info = patch_info[fieldname]
+    field_centre = np.array(info[:2]).astype(float)
+    map_radius = int(info[2])  # degrees
+    pix_side = int(info[4]) * 4  # 8 arcmin
+
+    dx = np.linspace(-map_radius, map_radius, map_radius * 60 // pix_side + 1)
+    ra = dx / np.cos(field_centre[1] * np.pi / 180) + field_centre[0]
+    dec = dx + field_centre[1]
+
+    map_grid = np.array([ra, dec])
+    # print(map_grid)
+
+    n_scans = len(scans)
+    n_stats = len(stats_list)
+    n_feeds = 20
+    n_sb = 4
+    scan_data = np.zeros((n_scans, n_feeds, n_sb, n_stats), dtype=np.float32)
+    maps = []
+    i_scan = 0
+    for scanid in scans:
+        filepath = l2_path + '/' + fieldname + '/' + fieldname + '_0' + scanid + '.h5'
+        #filepath = l2_path + '/' + fieldname + '_0' + scanid + '.h5'
+        data, map = get_scan_stats(filepath, map_grid)
+        scan_data[i_scan] = data
+        maps.append(map)
+        i_scan += 1
+    
+    ps_s_sb_chi2, ps_s_feed_chi2, ps_s_chi2, ps_o_sb_chi2, ps_o_feed_chi2, ps_o_chi2 = get_power_spectra(maps, map_grid)
+
+    insert_data_in_array(scan_data, ps_s_sb_chi2, 'ps_s_sb_chi2', obsid=True)
+    insert_data_in_array(scan_data, ps_s_feed_chi2, 'ps_s_feed_chi2', obsid=True)
+    insert_data_in_array(scan_data, ps_s_chi2, 'ps_s_chi2', obsid=True)
+    insert_data_in_array(scan_data, ps_o_sb_chi2, 'ps_o_sb_chi2', obsid=True)
+    insert_data_in_array(scan_data, ps_o_feed_chi2, 'ps_o_feed_chi2', obsid=True)
+    insert_data_in_array(scan_data, ps_o_chi2, 'ps_o_chi2', obsid=True)
+
+    ## [map_list, indices]
+    # ## map_list[i][j] = [map, rms]
+    # print('exiting')
+    # sys.exit()
+    return scan_data
+
+
+def get_power_spectra(maps, map_grid):
+    n_feeds = 20
+    n_sb = 4
+    n_k = 10
+    n_scans = len(maps)
+    ra, dec = map_grid
+    h = 0.7
+    deg2Mpc = 76.22 / h
+    GHz2Mpc = 699.62 / h * (1 + 2.9) ** 2 / 115
+
+    d_dec = dec[1] - dec[0]
+    d_th = d_dec * deg2Mpc
+
+    dz = 32.2e-3 * GHz2Mpc
+
+    ps_s_sb_chi2 = np.zeros((n_scans, n_feeds, n_sb))
+    ps_s_feed_chi2 = np.zeros((n_scans, n_feeds, n_sb))
+    ps_s_chi2 = np.zeros((n_scans, n_feeds, n_sb))
+    # ps_s_stackp_chi2 = np.zeros((n_scans, n_feeds, n_sb))
+    # ps_s_stackfp_chi2 = np.zeros((n_scans, n_feeds, n_sb))
+    ps_o_sb_chi2 = np.zeros((n_scans, n_feeds, n_sb))
+    ps_o_feed_chi2 = np.zeros((n_scans, n_feeds, n_sb))
+    ps_o_chi2 = np.zeros((n_scans, n_feeds, n_sb))
+    # ps_o_stackp_chi2 = np.zeros((n_scans, n_feeds, n_sb))
+    # ps_o_stackfp_chi2 = np.zeros((n_scans, n_feeds, n_sb))
+    sum_obsid = np.zeros((len(ra) - 1, len(dec) - 1, n_sb, 64))  # np.zeros((len(ra), len(dec), 64))
+    div_obsid = np.zeros_like(sum_obsid)
+    sum_sb_obsid = np.zeros((n_feeds, len(ra) - 1, len(dec) - 1, n_sb, 64))  # np.zeros((len(ra), len(dec), 64))
+    div_sb_obsid = np.zeros_like(sum_sb_obsid)
+    ind_feed = []  # np.zeros((n_scans, n_feeds, 2, 2)).astype(int)
+    accepted = np.zeros((n_scans, n_feeds, n_sb))
+    for l in range(n_scans):  # need tests for if a scan is 
+        map_list, indices = maps[l]
+
+        sum_scan = np.zeros((len(ra) - 1, len(dec) - 1, n_sb, 64))  # np.zeros((len(ra), len(dec), 64))
+        div_scan = np.zeros_like(sum_scan)
+        ind_feed.append(indices)
+        for i in range(n_feeds):
+            # ra_bins = map_grid[0][indices[i, 0, 0] - 1:indices[i, 0, 1] + 1]
+            # dec_bins = map_grid[1][indices[i, 1, 0] - 1:indices[i, 1, 1] + 1]
+            ind = indices[i]
+            # print(indices)
+            map_feed = np.zeros((ind[0, 1] - ind[0, 0] + 1, ind[1, 1] - ind[1, 0] + 1, n_sb, 64))  # np.zeros((len(ra), len(dec), 64))
+            rms_feed = np.zeros_like(map_feed)
+            for j in range(n_sb):
+                if not map_list[i][j]:
+                    ps_s_sb_chi2[l, i, j] = np.nan
+                else:
+                    accepted[l, i, j] = 1.0
+                    map, rms = map_list[i][j]
+                    # print(map[:,:,10])
+                    # print(rms[:,:,10])
+                    ps_s_sb_chi2[l, i, j] = get_ps_chi2(map, rms, n_k, d_th, dz)  # , Pk, ps_mean, ps_std, transfer 
+                    chi2 = ps_s_sb_chi2[l, i, j]
+                    if np.isnan(chi2):
+                        print(map[np.isnan(map)])
+                        print(rms[np.isnan(rms)])
+                        sys.exit()
+                    map_feed[:, :, j, :] = map
+                    rms_feed[:, :, j, :] = rms
+                    
+                    where = np.where(rms > 0)
+                    sum_sb_obsid[i, ind[0, 0] - 1:ind[0, 1], ind[1, 0] - 1:ind[1, 1], j, :][where] += map[where] / rms[where] ** 2
+                    div_sb_obsid[i, ind[0, 0] - 1:ind[0, 1], ind[1, 0] - 1:ind[1, 1], j, :][where] += 1.0 / rms[where] ** 2 
+            if np.sum(accepted[l, i, :]) == 0:
+                ps_s_feed_chi2[l, i, :] = np.nan
+            else:
+                sh = map_feed.shape
+                ps_s_feed_chi2[l, i, :] = get_ps_chi2(
+                    map_feed.reshape((sh[0], sh[1], n_sb * 64)),
+                    rms_feed.reshape((sh[0], sh[1], n_sb * 64)),
+                    n_k, d_th, dz)
+                where = np.where(rms_feed > 0.0)
+                sum_scan[indices[i, 0, 0] - 1:indices[i, 0, 1], indices[i, 1, 0] - 1:indices[i, 1, 1], :, :][where] += map_feed[where] / rms_feed[where] ** 2 
+                div_scan[indices[i, 0, 0] - 1:indices[i, 0, 1], indices[i, 1, 0] - 1:indices[i, 1, 1], :, :][where] += 1.0 / rms_feed[where] ** 2 
+        if np.sum(accepted[l, :, :].flatten()) == 0:
+            ps_s_chi2[l, :, :] = np.nan
+        else:        
+            map_scan = np.zeros_like(sum_scan)
+            rms_scan = np.zeros_like(sum_scan)
+            where = np.where(div_scan > 0.0)
+            map_scan[where] = sum_scan[where] / div_scan[where]
+            rms_scan[where] = np.sqrt(1.0 / div_scan[where])
+            sh = map_scan.shape
+            map_scan = map_scan.reshape((sh[0], sh[1], n_sb * 64))
+            rms_scan = rms_scan.reshape((sh[0], sh[1], n_sb * 64))
+            indices = np.ma.masked_equal(indices, 0, copy=False).astype(int)
+            min_ind = np.min(indices[:, :, 0], axis=0)  ## only use the non-masked sidebands
+            max_ind = np.max(indices[:, :, 1], axis=0)
+            # print(min_ind, max_ind)
+            # print(map_scan.shape)
+            ps_s_chi2[l, :, :] = get_ps_chi2(
+                    map_scan[min_ind[0] -1:max_ind[0], min_ind[1] -1:max_ind[1]],
+                    rms_scan[min_ind[0] -1:max_ind[0], min_ind[1] -1:max_ind[1]],
+                    n_k, d_th, dz)
+
+            sum_obsid[where] += sum_scan[where]
+            div_obsid[where] += div_scan[where]
+    if np.sum(accepted[:, :, :].flatten()) == 0:
+        ps_o_sb_chi2[:] = np.nan
+        ps_o_feed_chi2[:] = np.nan
+        ps_o_chi2[:] = np.nan
+    else:
+        map_obsid = np.zeros_like(sum_obsid)
+        rms_obsid = np.zeros_like(sum_obsid)
+        where = np.where(div_obsid > 0.0)
+        map_obsid[where] = sum_obsid[where] / div_obsid[where]
+        rms_obsid[where] = np.sqrt(1.0 / div_obsid[where])
+        sh = map_obsid.shape
+        map_obsid = map_obsid.reshape((sh[0], sh[1], n_sb * 64))
+        rms_obsid = rms_obsid.reshape((sh[0], sh[1], n_sb * 64))
+
+        ind_feed = np.array(ind_feed).astype(int)
+        ind_feed = np.ma.masked_equal(ind_feed, 0, copy=False).astype(int)
+        min_ind = np.min(ind_feed[:, :, :, 0], axis=(0, 1))
+        max_ind = np.max(ind_feed[:, :, :, 1], axis=(0, 1))
+        ps_o_chi2[:, :, :] = get_ps_chi2(
+                    map_obsid[min_ind[0] -1:max_ind[0], min_ind[1] -1:max_ind[1]],
+                    rms_obsid[min_ind[0] -1:max_ind[0], min_ind[1] -1:max_ind[1]],
+                    n_k, d_th, dz)
+        # sum_sb_obsid = np.zeros((n_feeds, len(ra), len(dec), n_sb, 64)) 
+        for i in range(n_feeds):
+            min_ind = np.min(ind_feed[:, i, :, 0], axis=0)
+            max_ind = np.max(ind_feed[:, i, :, 1], axis=0)
+                
+            for j in range(n_sb):
+                if np.sum(accepted[:, i, j]) == 0:
+                    ps_o_sb_chi2[:, i, j] = np.nan
+                else: 
+                    map_sb = np.zeros((len(ra), len(dec), 64))
+                    rms_sb = np.zeros((len(ra), len(dec), 64))
+                    where = np.where(div_sb_obsid[i, :, :, j, :] > 0)
+                    map_sb[where] = sum_sb_obsid[i, :, :, j, :][where] / div_sb_obsid[i, :, :, j, :][where]
+                    rms_sb[where] = np.sqrt(1.0 / div_sb_obsid[i, :, :, j, :][where])
+                    ps_o_sb_chi2[:, i, j] = get_ps_chi2(
+                        map_sb[min_ind[0] -1:max_ind[0], min_ind[1] -1:max_ind[1]],
+                        rms_sb[min_ind[0] -1:max_ind[0], min_ind[1] -1:max_ind[1]],
+                        n_k, d_th, dz)
+            if np.sum(accepted[:, i, :].flatten()) == 0:
+                ps_o_feed_chi2[:, i, :] = np.nan
+            else:   
+                map_feed = np.zeros((len(ra), len(dec), n_sb, 64)) #np.zeros((max_ind[0] - min_ind[0] + 2, max_ind[1] - min_ind[1] + 2, n_sb, 64)) #np.zeros((len(ra), len(dec), n_sb, 64))        
+                rms_feed = np.zeros_like(map_feed)
+                where = where = np.where(div_sb_obsid[i, :, :, :, :] > 0)
+                map_feed[where] = sum_sb_obsid[i, :, :, :, :][where] / div_sb_obsid[i, :, :, :, :][where]
+                rms_feed[where] = np.sqrt(1.0 / div_sb_obsid[i, :, :, :, :][where])
+                map_feed = map_feed[min_ind[0] -1:max_ind[0], min_ind[1] -1:max_ind[1]]
+                rms_feed = rms_feed[min_ind[0] -1:max_ind[0], min_ind[1] -1:max_ind[1]]
+                sh = map_feed.shape
+                ps_o_feed_chi2[:, i, :] = get_ps_chi2(
+                        map_feed.reshape((sh[0], sh[1], n_sb * 64)),
+                        rms_feed.reshape((sh[0], sh[1], n_sb * 64)),
+                        n_k, d_th, dz)
+            
+    return (ps_s_sb_chi2, ps_s_feed_chi2, ps_s_chi2, ps_o_sb_chi2,
+            ps_o_feed_chi2, ps_o_chi2)
+                # return (ps_s_sb_chi2, ps_s_feed_chi2, ps_s_chi2, ps_s_stackp_chi2, ps_s_stackfp_chi2, ps_o_sb_chi2,
+    #         ps_o_feed_chi2, ps_o_chi2, ps_o_stackp_chi2, ps_o_stackfp_chi2)
+
+def get_ps_chi2(map, rms, n_k, d_th, dz):
+
+    where = np.where(rms > 0)
+    k_bin_edges = np.logspace(-1.8, np.log10(0.5), n_k)
+    w = np.zeros_like(rms)
+    w[where] = 1 / rms[where] ** 2
+
+    Pk, k, nmodes = compute_power_spec3d(w * map, k_bin_edges, d_th, d_th, dz)
+
+    where = np.where(Pk > 0)
+
+    n_sim = 20
+    ps_arr = np.zeros((n_sim, n_k - 1))
+    for l in range(n_sim):
+        map_n = np.random.randn(*rms.shape) * rms
+        ps_arr[l] = compute_power_spec3d(w * map_n, k_bin_edges, d_th, d_th, dz)[0]
+
+    transfer = 1.0 / np.exp((0.055/k) ** 2.5)  # 6.7e5 / np.exp((0.055/k) ** 2.5)#1.0 / np.exp((0.03/k) ** 2)   ######## Needs to be tested!
+
+    ps_mean = np.mean(ps_arr, axis=0)
+    ps_std = np.std(ps_arr, axis=0) / transfer
+    Pk = Pk / transfer
+
+    n_chi2 = len(Pk[where])
+    if n_chi2 < 5:
+        return np.nan
+    chi = np.sum(((Pk[where] - ps_mean[where])/ ps_std[where]) ** 3)
+    chi2 = np.sign(chi) * np.abs((np.sum(((Pk[where] - ps_mean[where])/ ps_std[where]) ** 2) - n_chi2) / np.sqrt(2 * n_chi2))
+    return chi2 #, Pk, ps_mean, ps_std, transfer
+
+
+
+def get_patch_info(path):
+    with open(path, 'r') as f:
+        lines = f.read().splitlines()
+        my_list = [[x for x in line.split()] for line in lines]
+        my_dict = { y[0]: y[1:7] for y in my_list[:-1] }
+    return my_dict
 
 def save_data_2_h5(params, scan_list, scan_data, fieldname):
     filename = data_folder + 'scan_data_' + id_string + fieldname + '.h5'
@@ -817,6 +1105,9 @@ if __name__ == "__main__":
     accept_params = importlib.import_module(params['ACCEPT_MOD_PARAMS'][:-3])
     stats_list = importlib.import_module(params['STATS_LIST'][:-3]).stats_list
     fields = read_runlist(params)
+
+    patch_filepath = params['PATCH_DEFINITION_FILE']
+    patch_info = get_patch_info(patch_filepath)
 
     weather_filepath = params['WEATHER_FILEPATH']
     data_folder = params['ACCEPT_DATA_FOLDER']
