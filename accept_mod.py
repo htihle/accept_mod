@@ -905,7 +905,7 @@ def get_power_spectra(maps, map_grid):
             ps_s_chi2[l, :, :] = get_ps_chi2(
                     map_scan[min_ind[0] -1:max_ind[0], min_ind[1] -1:max_ind[1]],
                     rms_scan[min_ind[0] -1:max_ind[0], min_ind[1] -1:max_ind[1]],
-                    n_k, d_th, dz)
+                    n_k, d_th, dz, is_feed=True)
 
             sum_obsid[where] += sum_scan[where]
             div_obsid[where] += div_scan[where]
@@ -930,7 +930,7 @@ def get_power_spectra(maps, map_grid):
         ps_o_chi2[:, :, :] = get_ps_chi2(
                     map_obsid[min_ind[0] -1:max_ind[0], min_ind[1] -1:max_ind[1]],
                     rms_obsid[min_ind[0] -1:max_ind[0], min_ind[1] -1:max_ind[1]],
-                    n_k, d_th, dz)
+                    n_k, d_th, dz, is_feed=True)
         # sum_sb_obsid = np.zeros((n_feeds, len(ra), len(dec), n_sb, 64)) 
         for i in range(n_feeds):
             min_ind = np.min(ind_feed[:, i, :, 0], axis=0)
@@ -963,7 +963,7 @@ def get_power_spectra(maps, map_grid):
                 ps_o_feed_chi2[:, i, :] = get_ps_chi2(
                         map_feed.reshape((sh[0], sh[1], n_sb * 64)),
                         rms_feed.reshape((sh[0], sh[1], n_sb * 64)),
-                        n_k, d_th, dz)
+                        n_k, d_th, dz, is_feed=True)
             
     return (ps_s_sb_chi2, ps_s_feed_chi2, ps_s_chi2, ps_o_sb_chi2,
             ps_o_feed_chi2, ps_o_chi2)
@@ -992,6 +992,7 @@ def get_ps_chi2(map, rms, n_k, d_th, dz, is_feed=False):
     ps_mean = np.mean(ps_arr, axis=0)
 
     if is_feed:
+        # transfer4 = 1.0 / np.exp((0.050/k) ** 5.5)  + 1e-6 
         transfer = np.array([7.08265320e-07, 1.30980902e-06, 1.87137602e-01, 4.91884922e-01, 6.48433271e-01, 8.27296733e-01, 8.85360854e-01, 8.14043197e-01, 8.03513664e-01]) #1.0 / np.exp((0.050/k) ** 5.5) + 1e-6
         with open("feed_ps.txt", "ab") as myfile:
             np.savetxt(myfile, np.array([Pk, ps_mean]).T)
