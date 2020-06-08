@@ -988,12 +988,14 @@ def get_ps_chi2(map, rms, n_k, d_th, dz, is_feed=False):
         ps_arr[l] = compute_power_spec3d(w * map_n, k_bin_edges, d_th, d_th, dz)[0]
 
     transfer = 1.0 / np.exp((0.055/k) ** 2.5)  # 6.7e5 / np.exp((0.055/k) ** 2.5)#1.0 / np.exp((0.03/k) ** 2)   ######## Needs to be tested!
+    
+
+    ps_mean = np.mean(ps_arr, axis=0)
     if is_feed:
         transfer = 1.0 / np.exp((0.050/k) ** 5.5) + 1e-6
         with open("feed_ps.txt", "ab") as myfile:
-            np.savetxt(myfile, Pk.T)
+            np.savetxt(myfile, np.array([Pk, ps_mean]).T)
 
-    ps_mean = np.mean(ps_arr, axis=0)
     ps_std = np.std(ps_arr, axis=0) / transfer
     Pk = Pk / transfer
 
