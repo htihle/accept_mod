@@ -989,10 +989,10 @@ def get_ps_chi2(map, rms, n_k, d_th, dz, is_feed=False):
 
     transfer = 1.0 / np.exp((0.055/k) ** 2.5)  # 6.7e5 / np.exp((0.055/k) ** 2.5)#1.0 / np.exp((0.03/k) ** 2)   ######## Needs to be tested!
     
-
     ps_mean = np.mean(ps_arr, axis=0)
+
     if is_feed:
-        transfer = 1.0 / np.exp((0.050/k) ** 5.5) + 1e-6
+        transfer = np.array([7.08265320e-07, 1.30980902e-06, 1.87137602e-01, 4.91884922e-01, 6.48433271e-01, 8.27296733e-01, 8.85360854e-01, 8.14043197e-01, 8.03513664e-01]) #1.0 / np.exp((0.050/k) ** 5.5) + 1e-6
         with open("feed_ps.txt", "ab") as myfile:
             np.savetxt(myfile, np.array([Pk, ps_mean]).T)
 
