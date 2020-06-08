@@ -860,7 +860,7 @@ def get_power_spectra(maps, map_grid):
                     ps_s_sb_chi2[l, i, j] = np.nan
                 else:
                     accepted[l, i, j] = 1.0
-                    map, rms = map_list[i][j]
+                    map, rms = map_list[i][j]    ########### flip frequencies!! ##############
                     # print(map[:,:,10])
                     # print(rms[:,:,10])
                     ps_s_sb_chi2[l, i, j] = get_ps_chi2(map, rms, n_k, d_th, dz)  # , Pk, ps_mean, ps_std, transfer 
@@ -882,7 +882,7 @@ def get_power_spectra(maps, map_grid):
                 ps_s_feed_chi2[l, i, :] = get_ps_chi2(
                     map_feed.reshape((sh[0], sh[1], n_sb * 64)),
                     rms_feed.reshape((sh[0], sh[1], n_sb * 64)),
-                    n_k, d_th, dz)
+                    n_k, d_th, dz, is_feed=True)
                 where = np.where(rms_feed > 0.0)
                 sum_scan[indices[i, 0, 0] - 1:indices[i, 0, 1], indices[i, 1, 0] - 1:indices[i, 1, 1], :, :][where] += map_feed[where] / rms_feed[where] ** 2 
                 div_scan[indices[i, 0, 0] - 1:indices[i, 0, 1], indices[i, 1, 0] - 1:indices[i, 1, 1], :, :][where] += 1.0 / rms_feed[where] ** 2 
@@ -970,7 +970,7 @@ def get_power_spectra(maps, map_grid):
                 # return (ps_s_sb_chi2, ps_s_feed_chi2, ps_s_chi2, ps_s_stackp_chi2, ps_s_stackfp_chi2, ps_o_sb_chi2,
     #         ps_o_feed_chi2, ps_o_chi2, ps_o_stackp_chi2, ps_o_stackfp_chi2)
 
-def get_ps_chi2(map, rms, n_k, d_th, dz):
+def get_ps_chi2(map, rms, n_k, d_th, dz, is_feed=False):
 
     where = np.where(rms > 0)
     k_bin_edges = np.logspace(-1.8, np.log10(0.5), n_k)
@@ -988,6 +988,9 @@ def get_ps_chi2(map, rms, n_k, d_th, dz):
         ps_arr[l] = compute_power_spec3d(w * map_n, k_bin_edges, d_th, d_th, dz)[0]
 
     transfer = 1.0 / np.exp((0.055/k) ** 2.5)  # 6.7e5 / np.exp((0.055/k) ** 2.5)#1.0 / np.exp((0.03/k) ** 2)   ######## Needs to be tested!
+    if is_feed:
+        with open("feed_ps.txt", "ab") as myfile:
+            np.savetxt(myfile,Pk.T)
 
     ps_mean = np.mean(ps_arr, axis=0)
     ps_std = np.std(ps_arr, axis=0) / transfer
