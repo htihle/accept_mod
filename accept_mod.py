@@ -1005,12 +1005,12 @@ def get_ps_chi2(map, rms, n_k, d_th, dz, is_feed=False):
     chi = np.sum(((Pk[where] - ps_mean[where])/ ps_std[where]) ** 3)
     chi2 = np.sign(chi) * np.abs((np.sum(((Pk[where] - ps_mean[where])/ ps_std[where]) ** 2) - n_chi2) / np.sqrt(2 * n_chi2))
 
-    if chi2 < -20.0:
-        plt.errorbar(k, Pk * transfer, ps_std)
-        plt.loglog(k, transfer * ps_mean[-1])
-        plt.loglog(k, ps_mean * transfer)
-        print(k, ps_std * transfer)
-        plt.show()
+    # if chi2 < -20.0:
+    #     plt.errorbar(k, Pk * transfer, ps_std)
+    #     plt.loglog(k, transfer * ps_mean[-1])
+    #     plt.loglog(k, ps_mean * transfer)
+    #     print(k, ps_std * transfer)
+    #     plt.show()
     return chi2 #, Pk, ps_mean, ps_std, transfer
 
 
