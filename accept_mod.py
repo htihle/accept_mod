@@ -989,6 +989,7 @@ def get_ps_chi2(map, rms, n_k, d_th, dz, is_feed=False):
 
     transfer = 1.0 / np.exp((0.055/k) ** 2.5)  # 6.7e5 / np.exp((0.055/k) ** 2.5)#1.0 / np.exp((0.03/k) ** 2)   ######## Needs to be tested!
     if is_feed:
+        transfer = 1.0 / np.exp((0.050/k) ** 5.5)  + 1e-6
         with open("feed_ps.txt", "ab") as myfile:
             np.savetxt(myfile,Pk.T)
 
