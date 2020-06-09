@@ -844,7 +844,8 @@ def get_power_spectra(maps, map_grid):
     accepted = np.zeros((n_scans, n_feeds, n_sb))
     for l in range(n_scans):  # need tests for if a scan is 
         map_list, indices = maps[l]
-
+        if l == 0:
+            np.save('scan1map.npy', maps[l])
         sum_scan = np.zeros((len(ra) - 1, len(dec) - 1, n_sb, 64))  # np.zeros((len(ra), len(dec), 64))
         div_scan = np.zeros_like(sum_scan)
         ind_feed.append(indices)
@@ -861,6 +862,8 @@ def get_power_spectra(maps, map_grid):
                 else:
                     accepted[l, i, j] = 1.0
                     map, rms = map_list[i][j]    ########### flip frequencies!! ##############
+                    
+                    
                     # print(map[:,:,10])
                     # print(rms[:,:,10])
                     ps_s_sb_chi2[l, i, j] = get_ps_chi2(map, rms, n_k, d_th, dz)  # , Pk, ps_mean, ps_std, transfer 
@@ -878,6 +881,10 @@ def get_power_spectra(maps, map_grid):
             if np.sum(accepted[l, i, :]) == 0:
                 ps_s_feed_chi2[l, i, :] = np.nan
             else:
+                if ((l == 0) and (i == 0)):
+                    np.save('map_feed.npy', map_feed)
+                    np.save('rms_feed.npy', rms_feed)
+
                 sh = map_feed.shape
                 ps_s_feed_chi2[l, i, :] = get_ps_chi2(
                     map_feed.reshape((sh[0], sh[1], n_sb * 64)),
