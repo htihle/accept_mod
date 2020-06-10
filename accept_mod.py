@@ -559,6 +559,7 @@ def get_scan_stats(filepath, map_grid=None):
                 where = np.where(nhit > 0)
                 rms = np.zeros_like(nhit)
                 rms[where] = (sigma0[i, j][None, None, :]/ np.sqrt(nhit))[where]
+                print(np.std(map[where]/rms[where]))
                 map_list[i][j] = [map, rms]
                 #ps_chi2[i, j], Pk, ps_mean, ps_std, transfer = get_sb_ps(ra, dec, ra_bins, dec_bins, tod[i, j], mask[i, j], sigma0[i, j], d_dec)
     
