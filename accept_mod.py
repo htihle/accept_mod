@@ -772,7 +772,7 @@ def get_obsid_data(obsid_info):
     info = patch_info[fieldname]
     field_centre = np.array(info[:2]).astype(float)
     map_radius = int(info[2])  # degrees
-    pix_side = int(info[4]) * 4  # 8 arcmin
+    pix_side = int(info[4]) #* 4  # 8 arcmin
 
     dx = np.linspace(-map_radius, map_radius, map_radius * 60 // pix_side + 1)
     ra = dx / np.cos(field_centre[1] * np.pi / 180) + field_centre[0]
