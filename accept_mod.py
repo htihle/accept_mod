@@ -559,7 +559,8 @@ def get_scan_stats(filepath, map_grid=None):
                 where = np.where(nhit > 0)
                 rms = np.zeros_like(nhit)
                 rms[where] = (sigma0[i, j][None, None, :]/ np.sqrt(nhit))[where]
-                print(np.nanstd((tod[i, j, :, :] / sigma0[i, j, :, None]).flatten()))
+                #print(np.nanstd((tod[i, j, :, :] / sigma0[i, j, :, None]).flatten()))
+                print(np.std(map[where] / rms[where]))
                 map_list[i][j] = [map, rms]
                 #ps_chi2[i, j], Pk, ps_mean, ps_std, transfer = get_sb_ps(ra, dec, ra_bins, dec_bins, tod[i, j], mask[i, j], sigma0[i, j], d_dec)
     
@@ -772,7 +773,7 @@ def get_obsid_data(obsid_info):
     info = patch_info[fieldname]
     field_centre = np.array(info[:2]).astype(float)
     map_radius = int(info[2])  # degrees
-    pix_side = int(info[4]) #* 4  # 8 arcmin
+    pix_side = int(info[4])  # * 4  # 8 arcmin
 
     dx = np.linspace(-map_radius, map_radius, map_radius * 60 // pix_side + 1)
     ra = dx / np.cos(field_centre[1] * np.pi / 180) + field_centre[0]
