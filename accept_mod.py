@@ -845,7 +845,8 @@ def get_power_spectra(maps, map_grid):
     for l in range(n_scans):  # need tests for if a scan is 
         map_list, indices = maps[l]
         if l == 0:
-            np.save('scan1map.npy', maps[l])
+            pickle.dump(maps[l],open('scan1map.npy','wb'))
+            # np.save('scan1map.npy', maps[l])
         sum_scan = np.zeros((len(ra) - 1, len(dec) - 1, n_sb, 64))  # np.zeros((len(ra), len(dec), 64))
         div_scan = np.zeros_like(sum_scan)
         ind_feed.append(indices)
