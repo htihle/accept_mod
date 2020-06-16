@@ -560,7 +560,7 @@ def get_scan_stats(filepath, map_grid=None):
                 rms = np.zeros_like(nhit)
                 rms[where] = (sigma0[i, j][None, None, :]/ np.sqrt(nhit))[where]
                 #print(np.nanstd((tod[i, j, :, :] / sigma0[i, j, :, None]).flatten()))
-                print(np.std(map[where] / rms[where]))
+                #print(np.std(map[where] / rms[where]))
                 map_list[i][j] = [map, rms]
                 #ps_chi2[i, j], Pk, ps_mean, ps_std, transfer = get_sb_ps(ra, dec, ra_bins, dec_bins, tod[i, j], mask[i, j], sigma0[i, j], d_dec)
     
@@ -724,7 +724,7 @@ class ObsidData():
     def __init__(self):
         pass
 
-def get_scan_data(params, fields, fieldname, paralellize=False):
+def get_scan_data(params, fields, fieldname, paralellize=True):
     l2_path = params['LEVEL2_DIR']
     field = fields[fieldname]
     n_scans = field[2]
@@ -735,14 +735,38 @@ def get_scan_data(params, fields, fieldname, paralellize=False):
     scan_list = np.zeros((n_scans), dtype=np.int32)
     scan_data = np.zeros((n_scans, n_feeds, n_sb, n_stats), dtype=np.float32)
  
-    if paralellize:    
-        scanids = [scanid for obsid in field[0] for scanid in field[1][obsid]]
+    if paralellize:
+        pool = multiprocessing.Pool(100)    
 
-        filepaths = [l2_path + '/' + fieldname + '/' + fieldname + '_0' + scanid + '.h5' for scanid in scanids]
+        i_scan = 0
+        obsid_infos = []
+        for obsid in field[0]:
+            scans = field[1][obsid]
+            n_scans = len(scans)
+            obsid_info = ObsidData()
+            obsid_info.scans = scans
+            obsid_info.field = fieldname
+            obsid_info.l2_path = l2_path
+            obsid_infos.append(obsid_info)
+            scan_list[i_scan:i_scan+n_scans] = scans
+            i_scan += n_scans
+        scan_data_list = list(pool.map(get_obsid_data, obsid_infos))
+        i = 0
+        i_scan = 0
+        for obsid in field[0]:
+            scans = field[1][obsid]
+            n_scans = len(scans)
+            scan_data[i_scan:i_scan+n_scans] = scan_data_list[i]
+            i_scan += n_scans
+            i += 1
+        
+        # scanids = [scanid for obsid in field[0] for scanid in field[1][obsid]]
+
+        # filepaths = [l2_path + '/' + fieldname + '/' + fieldname + '_0' + scanid + '.h5' for scanid in scanids]
                                                                                                                                                                 
-        pool = multiprocessing.Pool(100)                                                                                                                              
-        scan_data[:,:,:,:], _ = np.array(list(pool.map(get_scan_stats, filepaths)))
-        scan_list[:] = scanids
+        # pool = multiprocessing.Pool(100)                                                                                                                              
+        # scan_data[:,:,:,:], _ = np.array(list(pool.map(get_scan_stats, filepaths)))
+        # scan_list[:] = scanids
     else:
         i_scan = 0
         for obsid in field[0]:
@@ -755,6 +779,9 @@ def get_scan_data(params, fields, fieldname, paralellize=False):
             scan_data[i_scan:i_scan+n_scans] = get_obsid_data(obsid_info)
             scan_list[i_scan:i_scan+n_scans] = scans
             i_scan += n_scans
+
+            
+        
             # for scanid in scans:
             #     filepath = l2_path + '/' + fieldname + '/' + fieldname + '_0' + scanid + '.h5'
             #     #filepath = l2_path + '/' + fieldname + '_0' + scanid + '.h5'
