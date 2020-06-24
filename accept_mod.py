@@ -375,6 +375,7 @@ def get_scan_stats(filepath, map_grid=None):
     n_spikes = len(sortedlists[0])
     n_jumps = len(sortedlists[1])
     n_anom = len(sortedlists[2]) 
+
     # cutoff = 0.0015 * 8.0
     n_sigma_spikes = 5         # Get from param file   ########################
     n_spikes_sb = (np.array([s.sbs for s in sortedlists[0]]) > 0.0015 * n_sigma_spikes).sum(0)
@@ -534,6 +535,16 @@ def get_scan_stats(filepath, map_grid=None):
 
     # ra_bins = np.linspace(centre[0] - d_ra * n_pix / 2, centre[0] + d_ra * n_pix / 2, n_pix + 1)
     # dec_bins = np.linspace(centre[1] - d_dec * n_pix / 2, centre[1] + d_dec * n_pix / 2, n_pix + 1)
+    if feat == 128:
+        field_centre = [np.mean(ra[0]), np.mean(dec[0])]
+        map_grid[0] = map_grid[0] / np.cos(field_centre[1] * np.pi / 180) + field_centre[0]
+        map_grid[1] = map_grid[1] + field_centre[1]
+    # ra = dx / np.cos(field_centre[1] * np.pi / 180) + field_centre[0]
+    # dec = dx + field_centre[1]
+
+    # map_grid = np.array([ra, dec])
+    
+
     indices = np.zeros((n_det, 2, 2)).astype(int)
     ps_chi2 = np.zeros((n_det, n_sb))
     ps_chi2[:] = np.nan 
@@ -798,7 +809,10 @@ def get_obsid_data(obsid_info):
     
     ## set up map grid
     info = patch_info[fieldname]
-    field_centre = np.array(info[:2]).astype(float)
+    if fieldname == "NCP":
+        field_centre = [0, 0]
+    else:
+        field_centre = np.array(info[:2]).astype(float)
     map_radius = int(info[2])  # degrees
     pix_side = int(info[4]) * 4  # 8 arcmin
 
