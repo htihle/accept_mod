@@ -537,8 +537,11 @@ def get_scan_stats(filepath, map_grid=None):
     # dec_bins = np.linspace(centre[1] - d_dec * n_pix / 2, centre[1] + d_dec * n_pix / 2, n_pix + 1)
     if feat == 128:
         field_centre = [np.mean(ra[0]), np.mean(dec[0])]
-        map_grid[0] = map_grid[0] / np.cos(field_centre[1] * np.pi / 180) + field_centre[0]
-        map_grid[1] = map_grid[1] + field_centre[1]
+        ra_grid = map_grid[0] / np.cos(field_centre[1] * np.pi / 180) + field_centre[0]
+        dec_grid = map_grid[1] + field_centre[1]
+    else:
+        ra_grid = map_grid[0]
+        dec_grid = map_grid[1]
     # ra = dx / np.cos(field_centre[1] * np.pi / 180) + field_centre[0]
     # dec = dx + field_centre[1]
 
@@ -550,15 +553,15 @@ def get_scan_stats(filepath, map_grid=None):
     ps_chi2[:] = np.nan 
     map_list = [[None for _ in range(n_sb)] for _ in range(n_det)]
     for i in range(n_det):
-        indices[i, 0, :] = np.digitize((np.min(ra[i]), np.max(ra[i])), map_grid[0])
-        indices[i, 1, :] = np.digitize((np.min(dec[i]), np.max(dec[i])), map_grid[1])
+        indices[i, 0, :] = np.digitize((np.min(ra[i]), np.max(ra[i])), ra_grid)
+        indices[i, 1, :] = np.digitize((np.min(dec[i]), np.max(dec[i])), dec_grid)
         # print(indices[0])
         # print(ra)
         # print((np.min(ra[i]), np.max(ra[i])))
         # print((np.min(dec[i]), np.max(dec[i])))
         # print(map_grid)
-        ra_bins = map_grid[0][indices[i, 0, 0] - 1:indices[i, 0, 1] + 1]
-        dec_bins = map_grid[1][indices[i, 1, 0] - 1:indices[i, 1, 1] + 1]
+        ra_bins = ra_grid[indices[i, 0, 0] - 1:indices[i, 0, 1] + 1]
+        dec_bins = dec_grid[indices[i, 1, 0] - 1:indices[i, 1, 1] + 1]
         # print(indices[0])
         # print(map_grid)
         # print(ra_bins)
