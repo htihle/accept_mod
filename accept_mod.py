@@ -890,9 +890,9 @@ def get_power_spectra(maps, map_grid):
     accepted = np.zeros((n_scans, n_feeds, n_sb))
     for l in range(n_scans):  # need tests for if a scan is 
         map_list, indices = maps[l]
-        if l == 0:
-            with open('scan1map.pkl','wb') as my_file:
-                pickle.dump(maps[l],my_file)
+        # if l == 0:
+        #     with open('scan1map.pkl','wb') as my_file:
+        #         pickle.dump(maps[l],my_file)
             # np.save('scan1map.npy', maps[l])
         sum_scan = np.zeros((len(ra) - 1, len(dec) - 1, n_sb, 64))  # np.zeros((len(ra), len(dec), 64))
         div_scan = np.zeros_like(sum_scan)
