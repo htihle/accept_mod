@@ -929,9 +929,9 @@ def get_power_spectra(maps, map_grid):
             if np.sum(accepted[l, i, :]) == 0:
                 ps_s_feed_chi2[l, i, :] = np.nan
             else:
-                if ((l == 0) and (i == 0)):
-                    np.save('map_feed.npy', map_feed)
-                    np.save('rms_feed.npy', rms_feed)
+                # if ((l == 0) and (i == 0)):
+                #     np.save('map_feed.npy', map_feed)
+                #     np.save('rms_feed.npy', rms_feed)
 
                 sh = map_feed.shape
                 ps_s_feed_chi2[l, i, :] = get_ps_chi2(
