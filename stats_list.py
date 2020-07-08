@@ -42,7 +42,13 @@ stats_list = [
     'winddir',       # hk: azimut from where wind is blowing, deg 
     'windspeed',     # hk: windspeed m/s
     'moon_dist',     # distance to the moon in deg
+    'moon_angle',    # the azimutal angle of the moon relative to pointing
+    'moon_cent_sl',  # is the moon close to the central sidelobe
+    'moon_outer_sl', # is the moon close to the outer sidelobes (from feedlegs)
     'sun_dist',      # distance to the sun in deg
+    'sun_angle',     # the azimutal angle of the sun relative to pointing
+    'sun_cent_sl',   # is the sun close to the central sidelobe
+    'sun_outer_sl',  # is the msun close to the outer sidelobes (from feedlegs)
     'ps_s_sb_chi2',  # ps_chi for single sb single scan (previously ps_chi2)
     'ps_s_feed_chi2',# ps_chi for single feed single scan 
     'ps_s_chi2',     # ps_chi combining all feeds for single scan 

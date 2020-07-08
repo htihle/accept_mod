@@ -13,6 +13,7 @@ import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import solar_system_ephemeris, EarthLocation                                                                                                    
 from astropy.coordinates import get_body_barycentric, get_body, get_moon
+from astropy.coordinates import AltAz
 import glob
 import os
 import pwd
@@ -650,27 +651,107 @@ def get_scan_stats(filepath, map_grid=None):
     insert_data_in_array(data, rain, 'rain')
     insert_data_in_array(data, winddir, 'winddir')
     insert_data_in_array(data, windspeed, 'windspeed')
-    
-    # sun and moon distances
-    mean_ra = np.mean(ra)
-    mean_dec = np.mean(dec)
-    with solar_system_ephemeris.set('builtin'):   
-        c = SkyCoord(ra=mean_ra*u.degree, dec=mean_dec*u.degree, frame='icrs')                                                                                                                            
+
+
+    # sun and moon position
+    mean_el = mean_el[:, 0]
+    mean_az = mean_az[:, 0]
+
+    moon_dist = np.zeros((n_det, n_sb))
+    moon_angle = np.zeros((n_det, n_sb))
+    moon_central_sl = np.zeros((n_det, n_sb))
+    moon_outer_sl = np.zeros((n_det, n_sb))
+
+    sun_dist = np.zeros((n_det, n_sb))
+    sun_angle = np.zeros((n_det, n_sb))
+    sun_central_sl = np.zeros((n_det, n_sb))
+    sun_outer_sl = np.zeros((n_det, n_sb))
+
+    with solar_system_ephemeris.set('builtin'):
         loc = coord.EarthLocation(lon=-118.283 * u.deg, lat=37.2313 * u.deg)
-        t = Time(scan_mjd, format='mjd')
-        moon = get_body('moon', t, loc)
-        sun = get_body('sun', t, loc)
-        cm = SkyCoord(ra=moon.ra.deg*u.degree, dec=moon.dec.deg*u.degree, frame='icrs')
-        cs = SkyCoord(ra=sun.ra.deg*u.degree, dec=sun.dec.deg*u.degree, frame='icrs')
-        d_moon = c.separation(cm).deg
-        d_sun = c.separation(cs).deg
-    insert_data_in_array(data, d_moon, 'moon_dist')
-    insert_data_in_array(data, d_sun, 'sun_dist')
+        time = Time(scan_mjd, format='mjd')
+        pole = np.array([mean_el, mean_az])
+        aa = AltAz(location=loc, obstime=time)
+
+        sun = get_body('sun', time, loc)
+        cs = sun.transform_to(aa)
+
+        lat, lon = move_to_frame(pole, [cs.alt.deg, cs.az.deg])
+        theta_sun = 90 - lat
+        phi_sun = lon
+
+        sun_dist[:, :] = theta_sun[:, None]
+        sun_angle[:, :] = phi_sun[:, None]
+        sun_angle_mod90 = sun_angle % 90
+        sun_central_sl = 1.0 * (sun_dist < 40) + 1.0 * (sun_dist < 30)
+        cond_1 = (sun_dist > 58.0) * (sun_dist < 75.0) * (sun_angle_mod90 > 75.0)
+        cond_2 = (sun_dist > 58.0) * (sun_dist < 75.0) * (sun_angle_mod90 < 15.0)
+        cond_3 = (sun_dist > 63.0) * (sun_dist < 70.0) * (sun_angle_mod90 > 82.0)
+        cond_4 = (sun_dist > 63.0) * (sun_dist < 70.0) * (sun_angle_mod90 < 8.0)
+        sun_outer_sl = 1.0 * cond_1 + 1.0 * cond_2 + 1.0 * cond_3 + 1.0 * cond_4  # can never be more than 2.0
+
+        moon = get_body('moon', time, loc)
+        cm = moon.transform_to(aa)
+
+        lat, lon = move_to_frame(pole, [cm.alt.deg, cm.az.deg])
+        theta_moon = 90 - lat
+        phi_moon = lon
+
+        moon_dist[:, :] = theta_moon[:, None]
+        moon_angle[:, :] = phi_moon[:, None]
+        moon_angle_mod90 = moon_angle % 90
+        moon_central_sl = 1.0 * (moon_dist < 40) + 1.0 * (moon_dist < 30)
+        cond_1 = (moon_dist > 58.0) * (moon_dist < 75.0) * (moon_angle_mod90 > 75.0)
+        cond_2 = (moon_dist > 58.0) * (moon_dist < 75.0) * (moon_angle_mod90 < 15.0)
+        cond_3 = (moon_dist > 63.0) * (moon_dist < 70.0) * (moon_angle_mod90 > 82.0)
+        cond_4 = (moon_dist > 63.0) * (moon_dist < 70.0) * (moon_angle_mod90 < 8.0)
+        moon_outer_sl = 1.0 * cond_1 + 1.0 * cond_2 + 1.0 * cond_3 + 1.0 * cond_4  # can never be more than 2.0
+
+    insert_data_in_array(data, moon_dist, 'moon_dist')
+    insert_data_in_array(data, moon_angle, 'moon_angle')
+    insert_data_in_array(data, moon_central_sl, 'moon_cent_sl')
+    insert_data_in_array(data, moon_outer_sl, 'moon_outer_sl')
+    insert_data_in_array(data, sun_dist, 'sun_dist')
+    insert_data_in_array(data, sun_angle, 'sun_angle')
+    insert_data_in_array(data, sun_central_sl, 'sun_cent_sl')
+    insert_data_in_array(data, sun_outer_sl, 'sun_outer_sl')
 
 
     ######## Here you can add new statistics  ##########
 
     return data, [map_list, indices]
+
+def move_to_frame(ang_cent, ang):
+    # ang = {theta, phi}
+    lat = ang[0] * np.pi / 180.0
+    lon = ang[1] * np.pi / 180.0
+
+    pos = np.zeros((3))
+    
+    pos[0] = np.cos(lat) * np.cos(lon)
+    pos[1] = np.cos(lat) * np.sin(lon)
+    pos[2] = np.sin(lat)
+
+    lat_frame = ang_cent[0] * np.pi / 180.0
+    lon_frame = ang_cent[1] * np.pi / 180.0
+
+    pos_rotx = np.zeros((3, len(ang_cent[0])))
+    # rotate around z-axis
+    pos_rotx[0] = np.cos(lon_frame) * pos[0] + np.sin(lon_frame) * pos[1]
+    pos_rotx[1] = - np.sin(lon_frame) * pos[0] + np.cos(lon_frame) * pos[1]
+    pos_rotx[2] = pos[2]
+
+    pos_roty = np.zeros_like(pos_rotx)
+    # rotate around new y-axis
+    pos_roty[0] = np.cos(np.pi / 2 - lat_frame) * pos_rotx[0] - np.sin(np.pi /2 - lat_frame) * pos_rotx[2]
+    pos_roty[2] = np.sin(np.pi / 2 - lat_frame) * pos_rotx[0] + np.cos(np.pi /2 - lat_frame) * pos_rotx[2]
+    pos_roty[1] = pos_rotx[1]
+
+    out_ang = np.zeros((2, len(ang_cent[0])))
+    out_ang[0] = np.arctan2(pos_roty[2], np.sqrt(pos_roty[0] ** 2 + pos_roty[1] ** 2)) #np.arccos(pos_roty[2])
+    out_ang[1] = np.arctan2(pos_roty[1], pos_roty[0])
+
+    return out_ang * 180 / np.pi
 
 def pad_nans(tod):
     n_pad = 10
