@@ -568,6 +568,9 @@ def get_scan_stats(filepath, map_grid=None):
         # print(ra_bins)
         # print(dec_bins)
         # sys.exit()
+        if (len(ra_bins) == 0) or (len(dec_bins) == 0):
+            continue
+
         for j in range(n_sb): ### should not need to be done per sideband.
             if acc[i, j]:
                 map, nhit = make_map(ra[i], dec[i], ra_bins, dec_bins, tod[i, j], mask[i, j])
