@@ -568,7 +568,7 @@ def get_scan_stats(filepath, map_grid=None):
         # print(ra_bins)
         # print(dec_bins)
         # sys.exit()
-        if (len(ra_bins) == 0) or (len(dec_bins) == 0):
+        if (len(ra_bins) <= 1) or (len(dec_bins) <= 1):
             continue
 
         for j in range(n_sb): ### should not need to be done per sideband.
