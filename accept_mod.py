@@ -561,6 +561,7 @@ def get_scan_stats(filepath, map_grid=None):
         # print((np.min(ra[i]), np.max(ra[i])))
         # print((np.min(dec[i]), np.max(dec[i])))
         # print(map_grid)
+        #map_feed = np.zeros((ind[0, 1] - ind[0, 0] + 1, ind[1, 1] - ind[1, 0] + 1, n_sb, 64))
         ra_bins = ra_grid[indices[i, 0, 0] - 1:indices[i, 0, 1] + 1]
         dec_bins = dec_grid[indices[i, 1, 0] - 1:indices[i, 1, 1] + 1]
         # print(indices[0])
@@ -570,6 +571,12 @@ def get_scan_stats(filepath, map_grid=None):
         # sys.exit()
         if (len(ra_bins) <= 1) or (len(dec_bins) <= 1):
             continue
+
+        if (len(dec_bins) - 1 != indices[i, 1, 1] - indices[i, 1, 0] + 1):
+            print(indices[i])
+            print(dec_bins)
+            print(dec[i])
+            sys.exit(1)
 
         for j in range(n_sb): ### should not need to be done per sideband.
             if acc[i, j]:
@@ -993,7 +1000,7 @@ def get_power_spectra(maps, map_grid):
                     ps_s_sb_chi2[l, i, j] = np.nan
                 else:
                     accepted[l, i, j] = 1.0
-                    map, rms = map_list[i][j]    ########### flip frequencies!! ##############
+                    map, rms = map_list[i][j]   ######### ######################### flip frequencies!! ############################# #################
                     
                     
                     # print(map[:,:,10])
