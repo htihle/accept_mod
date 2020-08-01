@@ -575,6 +575,9 @@ def get_scan_stats(filepath, map_grid=None):
         if (len(dec_bins) - 1 != indices[i, 1, 1] - indices[i, 1, 0] + 1):
             print(indices[i])
             print(dec_bins)
+            print(len(dec_bins))
+            print(dec_grid)
+            print(len(dec_grid))
             print(dec[i])
             sys.exit(1)
 
@@ -856,6 +859,7 @@ def get_scan_data(params, fields, fieldname, paralellize=True):
             scan_list[i_scan:i_scan+n_scans] = scans
             i_scan += n_scans
         scan_data_list = list(pool.map(get_obsid_data, obsid_infos))
+        print('Done with parallell')
         i = 0
         i_scan = 0
         for obsid in field[0]:
@@ -1286,10 +1290,13 @@ if __name__ == "__main__":
                 scan_data = my_file['scan_data'][()]
         else:
             scan_list, scan_data = get_scan_data(params, fields, fieldname)
+            print('Made scan data')
         save_data_2_h5(params, scan_list, scan_data, fieldname)
+        print('Saved scan data')
         accept_list, acc = make_accept_list(params, accept_params, scan_data)
+        print('Made accept list')
         jk_list = make_jk_list(params, accept_list, scan_list, scan_data)
- 
+        print('Made jk_list')
         save_jk_2_h5(params, scan_list, acc, accept_list, jk_list, fieldname)
 
         if show_plot:
