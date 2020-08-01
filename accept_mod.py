@@ -307,7 +307,10 @@ def get_scan_stats(filepath, map_grid=None):
         print('Could not load file', filepath, 'returning nans')
         data = np.zeros((20, 4, n_stats), dtype=np.float32)
         data[:] = np.nan
-        return data
+        indices = np.zeros((20, 2, 2)).astype(int)
+        map_list = [[None for _ in range(4)] for _ in range(20)]
+        
+        return data, [map_list, indices]
 
     t0 = time[0]
     time = (time - time[0]) * (24 * 60)  # minutes
