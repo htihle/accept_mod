@@ -556,14 +556,14 @@ def get_scan_stats(filepath, map_grid=None):
     for i in range(n_det):
         indices[i, 0, :] = np.digitize((np.min(ra[i]), np.max(ra[i])), ra_grid)
         indices[i, 1, :] = np.digitize((np.min(dec[i]), np.max(dec[i])), dec_grid)
-        # print(indices[0])
-        # print(ra)
-        # print((np.min(ra[i]), np.max(ra[i])))
-        # print((np.min(dec[i]), np.max(dec[i])))
-        # print(map_grid)
-        #map_feed = np.zeros((ind[0, 1] - ind[0, 0] + 1, ind[1, 1] - ind[1, 0] + 1, n_sb, 64))
+        # prevent overshooting
+        indices[i, 0, 0] = max(1, indices[i, 0, 0])
+        indices[i, 0, 1] = max(min(len(ra_grid) - 1, indices[i, 0, 1]), indices[i, 0, 0])
+        indices[i, 1, 0] = max(1, indices[i, 1, 0])
+        indices[i, 1, 1] = max(min(len(dec_grid) - 1, indices[i, 1, 1]), indices[i, 1, 0])
+
         ra_bins = ra_grid[indices[i, 0, 0] - 1:indices[i, 0, 1] + 1]
-        dec_bins = dec_grid[indices[i, 1, 0] - 1:indices[i, 1, 1] + 1]
+        dec_bins = dec_grid[indices[i, 1, 0] - 1:indices[i, 1, 1] + 1] ### this can overshoot
         # print(indices[0])
         # print(map_grid)
         # print(ra_bins)
@@ -576,7 +576,7 @@ def get_scan_stats(filepath, map_grid=None):
             print(indices[i])
             print(dec_bins)
             print(dec[i])
-            sys.exit(1)
+            # sys.exit(1)
 
         for j in range(n_sb): ### should not need to be done per sideband.
             if acc[i, j]:
@@ -1305,5 +1305,3 @@ if __name__ == "__main__":
         plt.show()
 
 
-#### TODO:
-## add elevation of individual feeds
