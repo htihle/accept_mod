@@ -410,8 +410,15 @@ def get_scan_stats(filepath, map_grid=None):
     mean_el = np.zeros((n_det, n_sb))
     mean_az = np.zeros((n_det, n_sb))
 
-    mean_az[:, :] = np.mean(point_tel[:, :, 0], axis=1)[:, None]
+    # mean_az[:, :] = np.mean(point_tel[:, :, 0], axis=1)[:, None]
+    mean_az[:, :] = np.arctan2(np.mean(np.sin(point_tel[:, :, 0] * np.pi / 180), axis=1), 
+                             np.mean(np.cos(point_tel[:, :, 0] * np.pi / 180), axis=1)
+                             )[:, None] * 180 / np.pi
+    mean_az[:, :] = (mean_az[:, :] + 360) % 360
     mean_el[:, :] = np.mean(point_tel[:, :, 1], axis=1)[:, None]
+    
+
+
 
     insert_data_in_array(data, mean_az, 'az')
     insert_data_in_array(data, mean_el, 'el')
