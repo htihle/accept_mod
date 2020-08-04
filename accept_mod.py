@@ -490,8 +490,11 @@ def get_scan_stats(filepath, map_grid=None):
     insert_data_in_array(data, n_anom_sb, 'n_anomalies')
 
     # number of nans
-    n_nan = np.nanmean(n_nan, axis=2)
-    insert_data_in_array(data, n_nan, 'n_nan')
+    where = (mask_sb_sum > 0)
+    n_nan_sb = np.zeros_like(mask_sb_sum)
+    n_nan_sb[where] = n_nan.sum(2)[where] / mask_sb_sum[where]
+
+    insert_data_in_array(data, n_nan_sb, 'n_nan')
     
     # tsys averaged over sb
     insert_data_in_array(data, tsys_sb, 'tsys')
