@@ -249,7 +249,7 @@ def get_scan_stats(filepath, map_grid=None):
             mask_full_ind = my_file['freqmask_full'][:]
             reason_ind = my_file['freqmask_reason'][:]
             sigma0_ind = my_file['sigma0'][()]
-            
+            n_nan_ind = my_file['n_nan'][()]
 
             pixels = np.array(my_file['pixels'][:]) - 1 
             pix2ind = my_file['pix2ind'][:]
@@ -326,6 +326,7 @@ def get_scan_stats(filepath, map_grid=None):
     tod = np.zeros((n_det, n_sb, n_freq, n_samp))
     mask = np.zeros((n_det, n_sb, n_freq))
     mask_full = np.zeros((n_det, n_sb, n_freq_hr))
+    n_nan = np.zeros((n_det, n_sb, n_freq_hr))
     acc = np.zeros((n_det, n_sb))
     ampl = np.zeros((4, n_det, n_sb, n_freq_hr))
     tsys = np.zeros((n_det, n_sb, n_freq))
@@ -342,6 +343,7 @@ def get_scan_stats(filepath, map_grid=None):
     tod[pixels] = tod_ind
     mask[pixels] = mask_ind
     mask_full[pixels] = mask_full_ind
+    n_nan[pixels] = n_nan_ind
     reason[pixels] = reason_ind
     acc[pixels] = acc_ind
     ampl[:, pixels, :, :] = ampl_ind
@@ -487,6 +489,10 @@ def get_scan_stats(filepath, map_grid=None):
     insert_data_in_array(data, n_jumps_sb, 'n_jumps')
     insert_data_in_array(data, n_anom_sb, 'n_anomalies')
 
+    # number of nans
+    n_nan = np.nanmean(n_nan, axis=2)
+    insert_data_in_array(data, n_nan, 'n_nan')
+    
     # tsys averaged over sb
     insert_data_in_array(data, tsys_sb, 'tsys')
 

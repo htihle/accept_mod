@@ -14,6 +14,7 @@ stats_list = [
     'n_spikes',      # number of spikes
     'n_jumps',       # number of jumps
     'n_anomalies',   # number of anomalies
+    'n_nan',         # number of nan-samples
     'tsys',          # average Tsys value of scan
     'pca1',          # average variance of removed pca mode 1
     'pca2',          # average variance of removed pca mode 2
@@ -39,7 +40,7 @@ stats_list = [
     'humidity',      # hk: relative humidity, (0-1)
     'pressure',      # hk: pressure, millibars
     'rain',          # hk: rain today, mm
-    'winddir',       # hk: azimut from where wind is blowing, deg 
+    'winddir',       # hk: azimuth from where wind is blowing, deg 
     'windspeed',     # hk: windspeed m/s
     'moon_dist',     # distance to the moon in deg
     'moon_angle',    # the azimutal angle of the moon relative to pointing
