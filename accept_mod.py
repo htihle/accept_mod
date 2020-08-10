@@ -132,7 +132,7 @@ def get_sb_ps(ra, dec, ra_bins, dec_bins, tod, mask, sigma, d_dec, n_k=10):
     # w = w / np.
 
     Pk, k, nmodes = compute_power_spec3d(w * map, k_bin_edges, d_th, d_th, dz)
-    n_sim = 20
+    n_sim = 100
     ps_arr = np.zeros((n_sim, n_k - 1))
     for l in range(n_sim):
         map_n = np.random.randn(*rms.shape) * rms
@@ -545,16 +545,17 @@ def get_scan_stats(filepath, map_grid=None):
     ra = point_radec[:, :, 0]
     dec = point_radec[:, :, 1]
 
-    # centre = [(np.max(ra) + np.min(ra)) / 2, (np.max(dec) + np.min(dec)) / 2]
+    centre = [(np.max(ra[0]) + np.min(ra[0])) / 2, (np.max(dec[0]) + np.min(dec[0])) / 2]
 
-    # d_dec = 8.0 / 60 
-    # d_ra = d_dec / np.cos(centre[1] / 180 * np.pi) # arcmin
+    d_dec = 8.0 / 60 
+    d_ra = d_dec / np.cos(centre[1] / 180 * np.pi) # arcmin
 
 
-    # n_pix = 16
+    n_pix = 16
 
-    # ra_bins = np.linspace(centre[0] - d_ra * n_pix / 2, centre[0] + d_ra * n_pix / 2, n_pix + 1)
-    # dec_bins = np.linspace(centre[1] - d_dec * n_pix / 2, centre[1] + d_dec * n_pix / 2, n_pix + 1)
+    ra_bins2 = np.linspace(centre[0] - d_ra * n_pix / 2, centre[0] + d_ra * n_pix / 2, n_pix + 1)
+    dec_bins2 = np.linspace(centre[1] - d_dec * n_pix / 2, centre[1] + d_dec * n_pix / 2, n_pix + 1)
+
     if feat == 128:
         field_centre = [np.mean(ra[0]), np.mean(dec[0])]
         ra_grid = map_grid[0] / np.cos(field_centre[1] * np.pi / 180) + field_centre[0]
@@ -582,7 +583,7 @@ def get_scan_stats(filepath, map_grid=None):
         indices[i, 1, 1] = max(min(len(dec_grid) - 1, indices[i, 1, 1]), indices[i, 1, 0])
 
         ra_bins = ra_grid[indices[i, 0, 0] - 1:indices[i, 0, 1] + 1]
-        dec_bins = dec_grid[indices[i, 1, 0] - 1:indices[i, 1, 1] + 1] ### this can overshoot
+        dec_bins = dec_grid[indices[i, 1, 0] - 1:indices[i, 1, 1] + 1]
         # print(indices[0])
         # print(map_grid)
         # print(ra_bins)
@@ -609,9 +610,9 @@ def get_scan_stats(filepath, map_grid=None):
                 #print(np.nanstd((tod[i, j, :, :] / sigma0[i, j, :, None]).flatten()))
                 #print(np.std(map[where] / rms[where]))
                 map_list[i][j] = [map, rms]
-                #ps_chi2[i, j], Pk, ps_mean, ps_std, transfer = get_sb_ps(ra, dec, ra_bins, dec_bins, tod[i, j], mask[i, j], sigma0[i, j], d_dec)
-    
-    #insert_data_in_array(data, ps_chi2, 'ps_chi2')
+                ps_chi2[i, j], Pk, ps_mean, ps_std, transfer = get_sb_ps(ra[0], dec[0], ra_bins2, dec_bins2, tod[i, j], mask[i, j], sigma0[i, j], d_dec)
+    #np.save('ps_chi2_scan', ps_chi2)
+    insert_data_in_array(data, ps_chi2, 'ps_chi2')
     
     # add length of scan
     duration = (mjd[-1] - mjd[0]) * 24 * 60  # in minutes
@@ -748,7 +749,7 @@ def get_scan_stats(filepath, map_grid=None):
     insert_data_in_array(data, sun_central_sl, 'sun_cent_sl')
     insert_data_in_array(data, sun_outer_sl, 'sun_outer_sl')
 
-
+    ### perhaps a ps_xy and ps_z to distinguish frequency residuals from angular ones
     ######## Here you can add new statistics  ##########
 
     return data, [map_list, indices]
@@ -1150,7 +1151,7 @@ def get_ps_chi2(map, rms, n_k, d_th, dz, is_feed=False):
 
     where = np.where(Pk > 0)
 
-    n_sim = 20
+    n_sim = 100 #20
     ps_arr = np.zeros((n_sim, n_k - 1))
     for l in range(n_sim):
         map_n = np.random.randn(*rms.shape) * rms
@@ -1211,7 +1212,7 @@ def make_accept_list(params, accept_params, scan_data):
 
     acc = np.zeros(len(stats_list) + 1)
     acc[0] = np.nansum(acceptrate[accept_list]) / (n_scans * 19 * 4)
-
+    print(acc[0], 'before cuts')
     for i, stat_string in enumerate(stats_list):
         stats = extract_data_from_array(scan_data, stat_string)
         cuts = accept_params.stats_cut[stat_string]

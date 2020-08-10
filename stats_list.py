@@ -50,10 +50,11 @@ stats_list = [
     'sun_angle',     # the azimutal angle of the sun relative to pointing
     'sun_cent_sl',   # is the sun close to the central sidelobe
     'sun_outer_sl',  # is the msun close to the outer sidelobes (from feedlegs)
-    'ps_s_sb_chi2',  # ps_chi for single sb single scan (previously ps_chi2)
-    'ps_s_feed_chi2',# ps_chi for single feed single scan 
-    'ps_s_chi2',     # ps_chi combining all feeds for single scan 
-    'ps_o_sb_chi2',  # ps_chi for single sb full obsid 
-    'ps_o_feed_chi2',# ps_chi for single feed full obsid  
-    'ps_o_chi2',     # ps_chi combining all feeds for full obsid  
+    'ps_chi2',       # the "old" ps_chi2 algorith, should be ~ ps_s_sb_chi2
+    'ps_s_sb_chi2',  # ps_chi2 for single sb single scan (previously ps_chi2)
+    'ps_s_feed_chi2',# ps_chi2 for single feed single scan 
+    'ps_s_chi2',     # ps_chi2 combining all feeds for single scan 
+    'ps_o_sb_chi2',  # ps_chi2 for single sb full obsid 
+    'ps_o_feed_chi2',# ps_chi2 for single feed full obsid  
+    'ps_o_chi2',     # ps_chi2 combining all feeds for full obsid  
 ]
