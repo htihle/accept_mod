@@ -492,7 +492,7 @@ def get_scan_stats(filepath, map_grid=None):
     # number of nans
     where = (mask_sb_sum > 0)
     n_nan_sb = np.zeros_like(mask_sb_sum)
-    n_nan_sb[where] = n_nan.sum(2)[where] / mask_sb_sum[where]
+    n_nan_sb[where] = (n_nan * mask_full).sum(2)[where] / mask_sb_sum[where]
 
     insert_data_in_array(data, n_nan_sb, 'n_nan')
     
