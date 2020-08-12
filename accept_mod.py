@@ -113,6 +113,31 @@ def compute_power_spec3d(x, k_bin_edges, dx=1, dy=1, dz=1):
     return Pk, k, nmodes
 
 
+def compute_power_spec1d_2d(x, k_bin_edges, dx=1, dy=1, dz=1):
+    n_x, n_y, n_z = x.shape
+    Pk_1D = np.abs(fft.rfft(x, axis=2)) ** 2 * dz / n_z
+    kz = np.fft.rfftfreq(n_z, dz) * 2 * np.pi
+
+    Pk_1D = Pk_1D.mean((0, 1))
+    Pk_1D = Pk_1D[1:]
+
+    Pk_2D = np.abs(fft.fftn(x, axes=(0, 1))) ** 2 * (dx * dy) / (n_x * n_y)
+    kx = np.fft.fftfreq(n_x, dx) * 2 * np.pi
+    ky = np.fft.fftfreq(n_y, dy) * 2 * np.pi
+
+    kgrid = np.sqrt(sum(ki ** 2 for ki in np.meshgrid(kx, ky, indexing='ij')))
+
+    Pk_2D = Pk_2D.mean(2)
+
+    Pk_nmodes = np.histogram(kgrid[kgrid > 0], bins=k_bin_edges, weights=Pk_2D[kgrid > 0])[0]
+    nmodes = np.histogram(kgrid[kgrid > 0], bins=k_bin_edges)[0]
+
+    k = (k_bin_edges[1:] + k_bin_edges[:-1]) / 2.0
+    Pk = np.zeros_like(k)
+    Pk[np.where(nmodes > 0)] = Pk_nmodes[np.where(nmodes > 0)] / nmodes[np.where(nmodes > 0)]
+    return Pk_1D, Pk, k, nmodes
+
+
 def get_sb_ps(ra, dec, ra_bins, dec_bins, tod, mask, sigma, d_dec, n_k=10):
     map, nhit = make_map(ra, dec, ra_bins, dec_bins, tod, mask)
     h = 0.7
@@ -956,7 +981,7 @@ def get_obsid_data(obsid_info):
         maps.append(map)
         i_scan += 1
     
-    ps_s_sb_chi2, ps_s_feed_chi2, ps_s_chi2, ps_o_sb_chi2, ps_o_feed_chi2, ps_o_chi2 = get_power_spectra(maps, map_grid)
+    ps_s_sb_chi2, ps_s_feed_chi2, ps_s_chi2, ps_o_sb_chi2, ps_o_feed_chi2, ps_o_chi2, ps_z_s_sb_chi2, ps_xy_s_sb_chi2 = get_power_spectra(maps, map_grid)
 
     insert_data_in_array(scan_data, ps_s_sb_chi2, 'ps_s_sb_chi2', obsid=True)
     insert_data_in_array(scan_data, ps_s_feed_chi2, 'ps_s_feed_chi2', obsid=True)
@@ -964,6 +989,9 @@ def get_obsid_data(obsid_info):
     insert_data_in_array(scan_data, ps_o_sb_chi2, 'ps_o_sb_chi2', obsid=True)
     insert_data_in_array(scan_data, ps_o_feed_chi2, 'ps_o_feed_chi2', obsid=True)
     insert_data_in_array(scan_data, ps_o_chi2, 'ps_o_chi2', obsid=True)
+
+    insert_data_in_array(scan_data, ps_z_s_sb_chi2, 'ps_z_s_sb_chi2', obsid=True)
+    insert_data_in_array(scan_data, ps_xy_s_sb_chi2, 'ps_xy_s_sb_chi2', obsid=True)
 
     ## [map_list, indices]
     # ## map_list[i][j] = [map, rms]
@@ -995,6 +1023,10 @@ def get_power_spectra(maps, map_grid):
     ps_o_sb_chi2 = np.zeros((n_scans, n_feeds, n_sb))
     ps_o_feed_chi2 = np.zeros((n_scans, n_feeds, n_sb))
     ps_o_chi2 = np.zeros((n_scans, n_feeds, n_sb))
+    
+    ps_xy_s_sb_chi2 = np.zeros((n_scans, n_feeds, n_sb))
+    ps_z_s_sb_chi2 = np.zeros((n_scans, n_feeds, n_sb))
+    
     # ps_o_stackp_chi2 = np.zeros((n_scans, n_feeds, n_sb))
     # ps_o_stackfp_chi2 = np.zeros((n_scans, n_feeds, n_sb))
     sum_obsid = np.zeros((len(ra) - 1, len(dec) - 1, n_sb, 64))  # np.zeros((len(ra), len(dec), 64))
@@ -1022,6 +1054,8 @@ def get_power_spectra(maps, map_grid):
             for j in range(n_sb):
                 if not map_list[i][j]:
                     ps_s_sb_chi2[l, i, j] = np.nan
+                    ps_z_s_sb_chi2[l, i, j] = np.nan
+                    ps_xy_s_sb_chi2[l, i, j] = np.nan
                 else:
                     accepted[l, i, j] = 1.0
                     map, rms = map_list[i][j]   ######### ######################### flip frequencies!! ############################# #################
@@ -1030,6 +1064,7 @@ def get_power_spectra(maps, map_grid):
                     # print(map[:,:,10])
                     # print(rms[:,:,10])
                     ps_s_sb_chi2[l, i, j] = get_ps_chi2(map, rms, n_k, d_th, dz)  # , Pk, ps_mean, ps_std, transfer 
+                    ps_z_s_sb_chi2[l, i, j], ps_xy_s_sb_chi2[l, i, j] = get_ps_1d2d_chi2(map, rms, n_k, d_th, dz)
                     chi2 = ps_s_sb_chi2[l, i, j]
                     if np.isnan(chi2):
                         print(map[np.isnan(map)])
@@ -1049,6 +1084,7 @@ def get_power_spectra(maps, map_grid):
                 #     np.save('rms_feed.npy', rms_feed)
 
                 sh = map_feed.shape
+
                 ps_s_feed_chi2[l, i, :] = get_ps_chi2(
                     map_feed.reshape((sh[0], sh[1], n_sb * 64)),
                     rms_feed.reshape((sh[0], sh[1], n_sb * 64)),
@@ -1134,9 +1170,9 @@ def get_power_spectra(maps, map_grid):
                         map_feed.reshape((sh[0], sh[1], n_sb * 64)),
                         rms_feed.reshape((sh[0], sh[1], n_sb * 64)),
                         n_k, d_th, dz, is_feed=True)
-            
+
     return (ps_s_sb_chi2, ps_s_feed_chi2, ps_s_chi2, ps_o_sb_chi2,
-            ps_o_feed_chi2, ps_o_chi2)
+            ps_o_feed_chi2, ps_o_chi2, ps_z_s_sb_chi2, ps_xy_s_sb_chi2)
                 # return (ps_s_sb_chi2, ps_s_feed_chi2, ps_s_chi2, ps_s_stackp_chi2, ps_s_stackfp_chi2, ps_o_sb_chi2,
     #         ps_o_feed_chi2, ps_o_chi2, ps_o_stackp_chi2, ps_o_stackfp_chi2)
 
@@ -1164,8 +1200,8 @@ def get_ps_chi2(map, rms, n_k, d_th, dz, is_feed=False):
     if is_feed:
         # transfer4 = 1.0 / np.exp((0.050/k) ** 5.5)  + 1e-6 
         transfer = np.array([7.08265320e-07, 1.30980902e-06, 1.87137602e-01, 4.91884922e-01, 6.48433271e-01, 8.27296733e-01, 8.85360854e-01, 8.14043197e-01, 8.03513664e-01]) #1.0 / np.exp((0.050/k) ** 5.5) + 1e-6
-        with open("feed_ps.txt", "ab") as myfile:
-            np.savetxt(myfile, np.array([Pk, ps_mean]).T)
+        # with open("feed_ps.txt", "ab") as myfile:
+        #     np.savetxt(myfile, np.array([Pk, ps_mean]).T)
 
     ps_std = np.std(ps_arr, axis=0) / transfer
     Pk = Pk / transfer
@@ -1176,14 +1212,61 @@ def get_ps_chi2(map, rms, n_k, d_th, dz, is_feed=False):
     chi = np.sum(((Pk[where] - ps_mean[where])/ ps_std[where]) ** 3)
     chi2 = np.sign(chi) * np.abs((np.sum(((Pk[where] - ps_mean[where])/ ps_std[where]) ** 2) - n_chi2) / np.sqrt(2 * n_chi2))
 
-    # if chi2 < -20.0:
+    # if (chi2 > 20.0) and is_feed:
     #     plt.errorbar(k, Pk * transfer, ps_std)
     #     plt.loglog(k, transfer * ps_mean[-1])
     #     plt.loglog(k, ps_mean * transfer)
     #     print(k, ps_std * transfer)
+    #     print(chi2)
+    #     plt.figure()
+
+    #     plt.imshow(map[3, :, :] * w[3, :, :], interpolation=None)
     #     plt.show()
     return chi2 #, Pk, ps_mean, ps_std, transfer
 
+
+def get_ps_1d2d_chi2(map, rms, n_k, d_th, dz, is_feed=False):
+
+    where = np.where(rms > 0)
+    k_bin_edges = np.logspace(-1.45, np.log10(0.1), n_k)
+    w = np.zeros_like(rms)
+    w[where] = 1 / rms[where] ** 2
+
+    Pk_1D, Pk, k, nmodes = compute_power_spec1d_2d(w * map, k_bin_edges, d_th, d_th, dz)
+
+    where = np.where(Pk > 0)
+
+    n_sim = 100 #20
+    ps_arr = np.zeros((n_sim, n_k - 1))
+    ps_arr_1D = np.zeros((n_sim, len(Pk_1D)))
+    for l in range(n_sim):
+        map_n = np.random.randn(*rms.shape) * rms
+        ps_arr_1D[l], ps_arr[l] = compute_power_spec1d_2d(w * map_n, k_bin_edges, d_th, d_th, dz)[:2]
+
+    transfer = 1.0 #/ np.exp((0.055/k) ** 2.5)  # 6.7e5 / np.exp((0.055/k) ** 2.5)#1.0 / np.exp((0.03/k) ** 2)   ######## Needs to be tested!
+
+    ps_mean = np.mean(ps_arr, axis=0)
+    ps_1D_mean = np.mean(ps_arr_1D, axis=0)
+
+    ps_std = np.std(ps_arr, axis=0) / transfer
+    Pk = Pk / transfer
+
+    ps_1D_std = np.std(ps_arr_1D, axis=0)
+
+
+    n_chi2 = len(Pk[where])
+    if n_chi2 < 2:
+        return np.nan
+
+    chi = np.sum(((Pk[where] - ps_mean[where])/ ps_std[where]) ** 3)
+    chi2 = np.sign(chi) * np.abs((np.sum(((Pk[where] - ps_mean[where])/ ps_std[where]) ** 2) - n_chi2) / np.sqrt(2 * n_chi2))
+
+    n_chi2_1D = len(Pk_1D)
+    chi_1D = np.sum(((Pk_1D - ps_1D_mean)/ ps_1D_std) ** 3)
+
+    chi2_1D = np.sign(chi_1D) * np.abs((np.sum(((Pk_1D - ps_1D_mean)/ ps_1D_std) ** 2) - n_chi2_1D) / np.sqrt(2 * n_chi2_1D))
+
+    return chi2_1D, chi2
 
 
 def get_patch_info(path):
@@ -1198,6 +1281,9 @@ def save_data_2_h5(params, scan_list, scan_data, fieldname):
     f1 = h5py.File(filename, 'w')
     f1.create_dataset('scan_list', data=scan_list)
     f1.create_dataset('scan_data', data=scan_data)
+    dt = h5py.special_dtype(vlen=str) 
+    stats_list_arr = np.array(stats_list, dtype=dt)
+    f1.create_dataset('stats_list', data=stats_list_arr)
     f1.close()
 
 

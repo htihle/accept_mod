@@ -56,5 +56,7 @@ stats_list = [
     'ps_s_chi2',     # ps_chi2 combining all feeds for single scan 
     'ps_o_sb_chi2',  # ps_chi2 for single sb full obsid 
     'ps_o_feed_chi2',# ps_chi2 for single feed full obsid  
-    'ps_o_chi2',     # ps_chi2 combining all feeds for full obsid  
+    'ps_o_chi2',     # ps_chi2 combining all feeds for full obsid
+    'ps_z_s_sb_chi2',# ps_chi2 for average of z-direction 1D ps, single sb single scan
+    'ps_xy_s_sb_chi2'# ps_chi2 for average of xy-direction 2D ps, single sb single scan
 ]
