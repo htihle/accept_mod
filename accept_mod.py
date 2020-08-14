@@ -889,7 +889,7 @@ def get_scan_data(params, fields, fieldname, paralellize=True):
     scan_data = np.zeros((n_scans, n_feeds, n_sb, n_stats), dtype=np.float32)
  
     if paralellize:
-        pool = multiprocessing.Pool(100)    
+        pool = multiprocessing.Pool(48)    
 
         i_scan = 0
         obsid_infos = []
