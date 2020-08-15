@@ -1255,8 +1255,7 @@ def get_ps_1d2d_chi2(map, rms, n_k, d_th, dz, is_feed=False):
 
 
     n_chi2 = len(Pk[where])
-    if n_chi2 < 2:
-        return np.nan
+    
 
     chi = np.sum(((Pk[where] - ps_mean[where])/ ps_std[where]) ** 3)
     chi2 = np.sign(chi) * np.abs((np.sum(((Pk[where] - ps_mean[where])/ ps_std[where]) ** 2) - n_chi2) / np.sqrt(2 * n_chi2))
@@ -1265,7 +1264,8 @@ def get_ps_1d2d_chi2(map, rms, n_k, d_th, dz, is_feed=False):
     chi_1D = np.sum(((Pk_1D - ps_1D_mean)/ ps_1D_std) ** 3)
 
     chi2_1D = np.sign(chi_1D) * np.abs((np.sum(((Pk_1D - ps_1D_mean)/ ps_1D_std) ** 2) - n_chi2_1D) / np.sqrt(2 * n_chi2_1D))
-
+    if n_chi2 < 2:
+        return chi2_1D, np.nan
     return chi2_1D, chi2
 
 
