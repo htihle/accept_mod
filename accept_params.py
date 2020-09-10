@@ -1,7 +1,8 @@
 
 stats_cut = {
-    'mjd': [0.0, 1e10],
+    'mjd': [float("nan"), float("nan")],
     'night': [0.0, 12.0],
+    'sidereal': [0.0, 360.0],
     'az': [0.0, 360.0],
     'el': [35.0, 65.0],
     'chi2': [-5.0, 5.0],
@@ -9,7 +10,7 @@ stats_cut = {
     'az_chi2': [-7.5, 2.5],
     'max_az_chi2': [-7.5, 4.0],
     'med_az_chi2': [-7.5, 2.5],
-    'fbit': [0, 1e10],
+    'fbit': [float("nan"), float("nan")],
     'az_amp': [-0.0005, 0.0005],
     'el_amp': [-1.0, 1.0],
     'n_spikes': [0.0, 20.0],
@@ -47,7 +48,7 @@ stats_cut = {
     'moon_angle': [-180, 360], 
     'moon_cent_sl': [0, 1.5],
     'moon_outer_sl': [0, 1.5],
-    'sun_dist': [30, 180],
+    'sun_dist': [40, 180],
     'sun_angle': [-180, 360], 
     'sun_cent_sl': [0, 0.5],
     'sun_outer_sl': [0, 0.5],

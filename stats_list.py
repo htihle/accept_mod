@@ -1,6 +1,7 @@
 stats_list = [
     'mjd',           # mean MJD of scan
     'night',         # distance in h from 2 AM (UTC - 7)
+    'sidereal',      # sidereal time in degrees (up to a phase)
     'az',            # mean azimuth of scan
     'el',            # mean elevation of scan
     'chi2',          # chi2 statistic for all timestreams of whole sb

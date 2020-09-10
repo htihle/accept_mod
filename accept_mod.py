@@ -74,6 +74,8 @@ def get_spike_list(sb_mean, sd, scan_id, mjd):
             my_spikes.add(s)
     return my_spikes
 
+def get_sid(mjd):
+    return 360 * ((1.002737811 * mjd) % 1)
 
 def make_map(ra, dec, ra_bins, dec_bins, tod, mask):
     n_freq, n_samp = tod.shape
@@ -432,6 +434,9 @@ def get_scan_stats(filepath, map_grid=None):
     hours = (scan_mjd * 24 - 7) % 24
     close_to_night = np.minimum(np.abs(2.0 - hours), np.abs(26.0 - hours))
     insert_data_in_array(data, close_to_night, 'night')
+
+    # sidereal time in degrees (up to a phase)
+    insert_data_in_array(data, get_sid(scan_mjd), 'sidereal')
 
     # Mean az/el per feed
     mean_el = np.zeros((n_det, n_sb))
