@@ -889,7 +889,7 @@ def get_scan_data(params, fields, fieldname, paralellize=True):
     scan_data = np.zeros((n_scans, n_feeds, n_sb, n_stats), dtype=np.float32)
  
     if paralellize:
-        pool = multiprocessing.Pool(48)    
+        pool = multiprocessing.Pool(100)    
 
         i_scan = 0
         obsid_infos = []
@@ -1294,8 +1294,8 @@ def make_accept_list(params, accept_params, scan_data):
     # decline all sidebands that are entirely masked
     acceptrate = extract_data_from_array(scan_data, 'acceptrate')
 
-    # accept_list[:, 7, :] = False
-
+    # accept_list[:, 7, :] = False    
+    
     acc = np.zeros(len(stats_list) + 1)
     acc[0] = np.nansum(acceptrate[accept_list]) / (n_scans * 19 * 4)
     print(acc[0], 'before cuts')
@@ -1303,7 +1303,11 @@ def make_accept_list(params, accept_params, scan_data):
         stats = extract_data_from_array(scan_data, stat_string)
         cuts = accept_params.stats_cut[stat_string]
         accept_list[np.where(np.isnan(stats))] = False
-        accept_list[np.where((stats < cuts[0]) + (stats > cuts[1]))] = False
+        if (not np.isnan(cuts[0])):
+            accept_list[np.where(stats < cuts[0])] = False
+        if (not np.isnan(cuts[1])):
+            accept_list[np.where(stats > cuts[1])] = False
+        
         acc[i+1] = np.nansum(acceptrate[accept_list]) / (n_scans * 19 * 4)
         print(acc[i+1], stat_string)
 
@@ -1371,9 +1375,15 @@ if __name__ == "__main__":
         sys.exit()
 
     params = get_params(param_file)
-    sys.path.append(params['ACCEPT_PARAM_FOLDER'])
-    accept_params = importlib.import_module(params['ACCEPT_MOD_PARAMS'][:-3])
-    stats_list = importlib.import_module(params['STATS_LIST'][:-3]).stats_list
+    #sys.path.append(params['ACCEPT_PARAM_FOLDER'])
+    #accept_params = importlib.import_module(params['ACCEPT_PARAM_FOLDER'] + params['ACCEPT_MOD_PARAMS'][:-3])
+    spec = importlib.util.spec_from_file_location(params['ACCEPT_MOD_PARAMS'][:-3], params['ACCEPT_PARAM_FOLDER'] + params['ACCEPT_MOD_PARAMS'])
+    accept_params = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(accept_params)
+    spec = importlib.util.spec_from_file_location(params['STATS_LIST'][:-3], params['ACCEPT_PARAM_FOLDER'] + params['STATS_LIST'])    
+    stats_list = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(stats_list)
+    stats_list = stats_list.stats_list
     fields = read_runlist(params)
 
     patch_filepath = params['PATCH_DEFINITION_FILE']
