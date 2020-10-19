@@ -1351,6 +1351,11 @@ def make_jk_list(params, accept_list, scan_list, scan_data):
     saddlebags = extract_data_from_array(scan_data, 'saddlebag')
     jk_list[np.where(saddlebags > 2.5)] += 16 # 2^4
 
+    # sidereal time split 
+    sid = extract_data_from_array(scan_data, 'sidereal')
+    cutoff = np.percentile(sid[accept_list], 50.0)
+    print('Sidereal time cutoff: ', cutoff)
+    jk_list[np.where(sid > cutoff)] += 32 # 2^5
 
     ######## Here you can add new jack-knives  ############
 
@@ -1363,7 +1368,7 @@ def make_jk_list(params, accept_list, scan_list, scan_data):
 
 
 def save_jk_2_h5(params, scan_list, acceptrates, accept_list, jk_list, fieldname): 
-    filename = data_folder + 'jk_data_' + id_string + fieldname + '.h5'
+    filename = data_folder + 'jk_data_' + id_string + jk_string + fieldname + '.h5'
     f1 = h5py.File(filename, 'w')
     f1.create_dataset('scan_list', data=scan_list)
     f1.create_dataset('acceptrates', data=acceptrates)
@@ -1397,8 +1402,11 @@ if __name__ == "__main__":
     weather_filepath = params['WEATHER_FILEPATH']
     data_folder = params['ACCEPT_DATA_FOLDER']
     id_string = params['ACCEPT_DATA_ID_STRING'] + '_'
+    jk_string = params['JK_DATA_STRING'] + '_'
     if id_string == '_':
         id_string = ''
+    if jk_string == '_':
+        jk_string = ''
     data_from_file = params['SCAN_STATS_FROM_FILE'] # False #True
 
     show_plot = params['SHOW_ACCEPT_PLOT']

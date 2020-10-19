@@ -44,7 +44,7 @@ stats_cut = {
     'rain': [0.0, 20.0],
     'winddir': [0, 360],
     'windspeed': [0, 20],
-    'moon_dist': [30, 180],
+    'moon_dist': [40, 180],
     'moon_angle': [-180, 360], 
     'moon_cent_sl': [0, 1.5],
     'moon_outer_sl': [0, 1.5],
