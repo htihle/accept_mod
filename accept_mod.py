@@ -1462,7 +1462,7 @@ if __name__ == "__main__":
     if jk_string == '_':
         jk_string = ''
     data_from_file = params['SCAN_STATS_FROM_FILE'] # False #True
-
+    jk_param_list_file = params['JK_DEF_FILE']
     show_plot = params['SHOW_ACCEPT_PLOT']
 
     for fieldname in fields:
@@ -1478,7 +1478,7 @@ if __name__ == "__main__":
         print('Saved scan data')
         accept_list, acc = make_accept_list(params, accept_params, scan_data)
         print('Made accept list')
-        jk_list = make_jk_list(params, accept_list, scan_list, scan_data)
+        jk_list = make_jk_list(params, accept_list, scan_list, scan_data, jk_param_list_file)
         print('Made jk_list')
         save_jk_2_h5(params, scan_list, acc, accept_list, jk_list, fieldname)
 
