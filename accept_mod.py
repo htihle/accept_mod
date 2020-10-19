@@ -1319,7 +1319,17 @@ def make_accept_list(params, accept_params, scan_data):
     return accept_list, acc
 
 
-def make_jk_list(params, accept_list, scan_list, scan_data):
+def read_jk_param(filepath):
+    with open(filepath) as my_file:
+        lines = [line.split()[:2] for line in my_file]
+        n_split = int(lines[0][0])
+        lines = lines[2:n_split+1]
+        strings = [l[0] for l in lines]
+        types = [int(l[1]) for l in lines]
+    return strings, types
+
+
+def make_jk_list(params, accept_list, scan_list, scan_data, jk_param):
     n_scans, n_det, n_sb, _ = scan_data.shape
     jk_list = np.zeros((n_scans, n_det, n_sb), dtype=np.int32)
 
@@ -1327,43 +1337,87 @@ def make_jk_list(params, accept_list, scan_list, scan_data):
         jk_list[:] = 0 
         return jk_list
 
+    strings, types = read_jk_param(jk_param)
+
+    for j, string in enumerate(strings):
+        implement_split(scan_data, jk_list, string, j+1)
+
+    # # even/odd 
+    # obsid = [int(str(scanid)[:-2]) for scanid in scan_list]
+    # odd = np.array(obsid) % 2
+
+    # jk_list[:] += odd[:, None, None] * 2  # 2^1
+
+
+    # # day/night split
+    # mjd = extract_data_from_array(scan_data, 'mjd')
+    # hours = (mjd * 24 - 7) % 24
+    # closetonight = np.minimum(np.abs(2.0 - hours), np.abs(26.0 - hours))
     
-    # even/odd 
-    obsid = [int(str(scanid)[:-2]) for scanid in scan_list]
-    odd = np.array(obsid) % 2
+    # cutoff = np.percentile(closetonight[accept_list], 50.0)
+    # jk_list[np.where(closetonight > cutoff)] += 4 # 2^2
 
-    jk_list[:] += odd[:, None, None] * 2  # 2^1
+    # # halfmission split
+    # cutoff = np.percentile(mjd[accept_list], 50.0)
+    # jk_list[np.where(mjd > cutoff)] += 8 # 2^3
 
+    # # saddlebag split
+    # saddlebags = extract_data_from_array(scan_data, 'saddlebag')
+    # jk_list[np.where(saddlebags > 2.5)] += 16 # 2^4
 
-    # day/night split
-    mjd = extract_data_from_array(scan_data, 'mjd')
-    hours = (mjd * 24 - 7) % 24
-    closetonight = np.minimum(np.abs(2.0 - hours), np.abs(26.0 - hours))
-    
-    cutoff = np.percentile(closetonight[accept_list], 50.0)
-    jk_list[np.where(closetonight > cutoff)] += 4 # 2^2
+    # # sidereal time split 
+    # sid = extract_data_from_array(scan_data, 'sidereal')
+    # cutoff = np.percentile(sid[accept_list], 50.0)
+    # print('Sidereal time cutoff: ', cutoff)
+    # jk_list[np.where(sid > cutoff)] += 32 # 2^5
 
-    # halfmission split
-    cutoff = np.percentile(mjd[accept_list], 50.0)
-    jk_list[np.where(mjd > cutoff)] += 8 # 2^3
-
-    # saddlebag split
-    saddlebags = extract_data_from_array(scan_data, 'saddlebag')
-    jk_list[np.where(saddlebags > 2.5)] += 16 # 2^4
-
-    # sidereal time split 
-    sid = extract_data_from_array(scan_data, 'sidereal')
-    cutoff = np.percentile(sid[accept_list], 50.0)
-    print('Sidereal time cutoff: ', cutoff)
-    jk_list[np.where(sid > cutoff)] += 32 # 2^5
-
-    ######## Here you can add new jack-knives  ############
 
 
     # insert 0 on rejected sidebands, add 1 on accepted 
     jk_list[np.invert(accept_list)] = 0
     jk_list[accept_list] += 1 
 
+    return jk_list
+
+
+def implement_split(scan_data, jk_list, string, n):
+
+    # even/odd
+    if string == 'odde':
+        obsid = [int(str(scanid)[:-2]) for scanid in scan_list]
+        odd = np.array(obsid) % 2
+
+        jk_list[:] += odd[:, None, None] * int(2 ** n)
+    elif string == 'dayn':
+
+        # day/night split
+        mjd = extract_data_from_array(scan_data, 'mjd')
+        hours = (mjd * 24 - 7) % 24
+        closetonight = np.minimum(np.abs(2.0 - hours), np.abs(26.0 - hours))
+        
+        cutoff = np.percentile(closetonight[accept_list], 50.0)
+        jk_list[np.where(closetonight > cutoff)] += int(2 ** n)
+    elif string == 'half':
+        # halfmission split
+        cutoff = np.percentile(mjd[accept_list], 50.0)
+        jk_list[np.where(mjd > cutoff)] += int(2 ** n)
+    elif string == 'sdlb':
+        # saddlebag split
+        saddlebags = extract_data_from_array(scan_data, 'saddlebag')
+        jk_list[np.where(saddlebags > 2.5)] += int(2 ** n)
+    elif string == 'sidr':
+        # sidereal time split 
+        sid = extract_data_from_array(scan_data, 'sidereal')
+        cutoff = np.percentile(sid[accept_list], 50.0)
+        # print('Sidereal time cutoff: ', cutoff)
+        jk_list[np.where(sid > cutoff)] += int(2 ** n) 
+
+
+        ######## Here you can add new jack-knives  ############
+        ### elif .......:
+        ###
+    else:
+        print('Unknown split type: ', string)
     return jk_list
 
 
