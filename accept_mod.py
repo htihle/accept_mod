@@ -1411,8 +1411,10 @@ def implement_split(scan_data, jk_list, string, n):
         cutoff = np.percentile(sid[accept_list], 50.0)
         # print('Sidereal time cutoff: ', cutoff)
         jk_list[np.where(sid > cutoff)] += int(2 ** n) 
-
-
+    elif string == 'cesc':
+        fbit = extract_data_from_array(scan_data, 'fbit')
+        jk_list[np.where(fbit == 32)] += int(2 ** n) 
+        
         ######## Here you can add new jack-knives  ############
         ### elif .......:
         ###
