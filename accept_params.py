@@ -16,7 +16,7 @@ stats_cut = {
     'n_spikes': [0.0, 20.0],
     'n_jumps': [0.0, 0.99],
     'n_anomalies': [0.0, 2.0],
-    'n_nan': [0.0, 500.0],
+    'n_nan': [float("nan"), float("nan")],
     'tsys': [20.0, 65.0],
     'pca1': [0.0, 50.0],
     'pca2': [0.0, 30.0],
