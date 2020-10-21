@@ -1399,6 +1399,7 @@ def implement_split(scan_data, jk_list, string, n):
         jk_list[np.where(closetonight > cutoff)] += int(2 ** n)
     elif string == 'half':
         # halfmission split
+        mjd = extract_data_from_array(scan_data, 'mjd')
         cutoff = np.percentile(mjd[accept_list], 50.0)
         jk_list[np.where(mjd > cutoff)] += int(2 ** n)
     elif string == 'sdlb':
