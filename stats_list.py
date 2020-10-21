@@ -51,6 +51,7 @@ stats_list = [
     'sun_angle',     # the azimutal angle of the sun relative to pointing
     'sun_cent_sl',   # is the sun close to the central sidelobe
     'sun_outer_sl',  # is the msun close to the outer sidelobes (from feedlegs)
+    'sun_el',        # elevation of sun
     'ps_chi2',       # the "old" ps_chi2 algorith, should be ~ ps_s_sb_chi2
     'ps_s_sb_chi2',  # ps_chi2 for single sb single scan (previously ps_chi2)
     'ps_s_feed_chi2',# ps_chi2 for single feed single scan 

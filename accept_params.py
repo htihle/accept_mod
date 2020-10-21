@@ -52,6 +52,7 @@ stats_cut = {
     'sun_angle': [-180, 360], 
     'sun_cent_sl': [0, 0.5],
     'sun_outer_sl': [0, 0.5],
+    'sun_el': [-90, 90],
     'ps_chi2': [-10.0, 5.0],
     'ps_s_sb_chi2': [-10.0, 5.0],
     'ps_s_feed_chi2': [-10.0, 30.0],

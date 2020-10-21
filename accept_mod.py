@@ -730,6 +730,8 @@ def get_scan_stats(filepath, map_grid=None):
     sun_central_sl = np.zeros((n_det, n_sb))
     sun_outer_sl = np.zeros((n_det, n_sb))
 
+    sun_elevation = np.zeros((n_det, n_sb))
+
     with solar_system_ephemeris.set('builtin'):
         loc = coord.EarthLocation(lon=-118.283 * u.deg, lat=37.2313 * u.deg)
         time = Time(scan_mjd, format='mjd')
@@ -738,6 +740,7 @@ def get_scan_stats(filepath, map_grid=None):
 
         sun = get_body('sun', time, loc)
         cs = sun.transform_to(aa)
+        sun_elevation[:, :] = cs.alt.deg
 
         lat, lon = move_to_frame(pole, [cs.alt.deg, cs.az.deg])
         theta_sun = 90 - lat
@@ -778,6 +781,8 @@ def get_scan_stats(filepath, map_grid=None):
     insert_data_in_array(data, sun_angle, 'sun_angle')
     insert_data_in_array(data, sun_central_sl, 'sun_cent_sl')
     insert_data_in_array(data, sun_outer_sl, 'sun_outer_sl')
+
+    insert_data_in_array(data, sun_elevation, 'sun_el')
 
     ### perhaps a ps_xy and ps_z to distinguish frequency residuals from angular ones
     ######## Here you can add new statistics  ##########
@@ -1341,37 +1346,6 @@ def make_jk_list(params, accept_list, scan_list, scan_data, jk_param):
 
     for j, string in enumerate(strings):
         implement_split(scan_data, jk_list, string, j+1)
-
-    # # even/odd 
-    # obsid = [int(str(scanid)[:-2]) for scanid in scan_list]
-    # odd = np.array(obsid) % 2
-
-    # jk_list[:] += odd[:, None, None] * 2  # 2^1
-
-
-    # # day/night split
-    # mjd = extract_data_from_array(scan_data, 'mjd')
-    # hours = (mjd * 24 - 7) % 24
-    # closetonight = np.minimum(np.abs(2.0 - hours), np.abs(26.0 - hours))
-    
-    # cutoff = np.percentile(closetonight[accept_list], 50.0)
-    # jk_list[np.where(closetonight > cutoff)] += 4 # 2^2
-
-    # # halfmission split
-    # cutoff = np.percentile(mjd[accept_list], 50.0)
-    # jk_list[np.where(mjd > cutoff)] += 8 # 2^3
-
-    # # saddlebag split
-    # saddlebags = extract_data_from_array(scan_data, 'saddlebag')
-    # jk_list[np.where(saddlebags > 2.5)] += 16 # 2^4
-
-    # # sidereal time split 
-    # sid = extract_data_from_array(scan_data, 'sidereal')
-    # cutoff = np.percentile(sid[accept_list], 50.0)
-    # print('Sidereal time cutoff: ', cutoff)
-    # jk_list[np.where(sid > cutoff)] += 32 # 2^5
-
-
 
     # insert 0 on rejected sidebands, add 1 on accepted 
     jk_list[np.invert(accept_list)] = 0
