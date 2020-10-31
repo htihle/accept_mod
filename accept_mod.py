@@ -1389,7 +1389,27 @@ def implement_split(scan_data, jk_list, string, n):
     elif string == 'cesc':
         fbit = extract_data_from_array(scan_data, 'fbit')
         jk_list[np.where(fbit == 32)] += int(2 ** n) 
-        
+    elif string == 'ambt':
+        # ambient temperature split 
+        ambt = extract_data_from_array(scan_data, 'airtemp')
+        cutoff = np.percentile(ambt[accept_list], 50.0)
+        jk_list[np.where(ambt > cutoff)] += int(2 ** n) 
+    elif string == 'elev':
+        # elevation split 
+        el = extract_data_from_array(scan_data, 'el')
+        cutoff = np.percentile(el[accept_list], 50.0)
+        jk_list[np.where(el > cutoff)] += int(2 ** n) 
+    elif string == 'wind':
+        # windspeed split 
+        wind = extract_data_from_array(scan_data, 'windspeed')
+        cutoff = np.percentile(wind[accept_list], 50.0)
+        jk_list[np.where(wind > cutoff)] += int(2 ** n) 
+    elif string == 'sune':
+        # sun_elevation split 
+        sunel = extract_data_from_array(scan_data, 'sun_el')
+        cutoff = np.percentile(sunel[accept_list], 50.0)
+        jk_list[np.where(sunel > cutoff)] += int(2 ** n) 
+
         ######## Here you can add new jack-knives  ############
         ### elif .......:
         ###
