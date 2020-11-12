@@ -1410,6 +1410,11 @@ def implement_split(scan_data, jk_list, string, n):
         cutoff = np.percentile(sunel[accept_list], 50.0)
         jk_list[np.where(sunel > cutoff)] += int(2 ** n) 
 
+    elif string == 'snup':
+        # sun_up split (sun elevation > -5 deg) 
+        sunel = extract_data_from_array(scan_data, 'sun_el')
+        jk_list[np.where(sunel > -5.0)] += int(2 ** n) 
+
         ######## Here you can add new jack-knives  ############
         ### elif .......:
         ###
