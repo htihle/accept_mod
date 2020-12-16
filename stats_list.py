@@ -60,5 +60,19 @@ stats_list = [
     'ps_o_feed_chi2',# ps_chi2 for single feed full obsid  
     'ps_o_chi2',     # ps_chi2 combining all feeds for full obsid
     'ps_z_s_sb_chi2',# ps_chi2 for average of z-direction 1D ps, single sb single scan
-    'ps_xy_s_sb_chi2'# ps_chi2 for average of xy-direction 2D ps, single sb single scan
-]
+    'ps_xy_s_sb_chi2',# ps_chi2 for average of xy-direction 2D ps, single sb single scan
+    'sw_01',           # standing wave magnitude (unnormalized)
+    'sw_02',           # standing wave magnitude (unnormalized)
+    'sw_03',           # standing wave magnitude (unnormalized)
+    'sw_04',           # standing wave magnitude (unnormalized)
+    'sw_05',           # standing wave magnitude (unnormalized)
+    'sw_06',           # standing wave magnitude (unnormalized)
+    'sw_07',           # standing wave magnitude (unnormalized)
+    'sw_08',           # standing wave magnitude (unnormalized)
+    'sw_09',           # standing wave magnitude (unnormalized)
+    'sw_10',          # standing wave magnitude (unnormalized)
+    'sw_11',          # standing wave magnitude (unnormalized)
+    'sw_12',          # standing wave magnitude (unnormalized)
+    'sw_13',          # standing wave magnitude (unnormalized)
+    'sw_14'           # standing wave magnitude (unnormalized)
+ ]

@@ -762,7 +762,7 @@ def get_scan_stats(filepath, map_grid=None):
         lat, lon = move_to_frame(pole, [cm.alt.deg, cm.az.deg])
         theta_moon = 90 - lat
         phi_moon = lon
-
+        
         moon_dist[:, :] = theta_moon[:, None]
         moon_angle[:, :] = phi_moon[:, None]
         moon_angle_mod90 = moon_angle % 90
@@ -785,8 +785,28 @@ def get_scan_stats(filepath, map_grid=None):
     insert_data_in_array(data, sun_elevation, 'sun_el')
 
     ### perhaps a ps_xy and ps_z to distinguish frequency residuals from angular ones
-    ######## Here you can add new statistics  ##########
+    
+    filename = '/mn/stornext/d16/cmbco/comap/protodir/sw_complete_' + fieldname + '.h5'
+    i_scan = int(str(scanid)[-2:]) - 2  # goes from 0 to n_scan
+    #print(scanid, i_scan)
+    n_sw = 14
+    sw_array = np.zeros((n_det, n_sw, n_sb))
+    try:
+        with h5py.File(filename, mode="r") as my_file:
+            sw = my_file['%07i/sw_stats' % obsid][()][:, i_scan]
+        sw_array[:, :, :] = sw[:, :, None]
+    except:
+        print('problems with standing waves')
+        sw_array[:, :, :] = np.nan
 
+    for i in range(n_sw):
+        sw_str = 'sw_%02i' % (i + 1)
+        insert_data_in_array(data, sw_array[:, i, :], sw_str)
+   
+
+     ######## Here you can add new statistics  ##########
+   
+    
     return data, [map_list, indices]
 
 def move_to_frame(ang_cent, ang):
@@ -1365,9 +1385,7 @@ def implement_split(scan_data, jk_list, string, n):
     elif string == 'dayn':
 
         # day/night split
-        mjd = extract_data_from_array(scan_data, 'mjd')
-        hours = (mjd * 24 - 7) % 24
-        closetonight = np.minimum(np.abs(2.0 - hours), np.abs(26.0 - hours))
+        closetonight = extract_data_from_array(scan_data, 'night')
         
         cutoff = np.percentile(closetonight[accept_list], 50.0)
         jk_list[np.where(closetonight > cutoff)] += int(2 ** n)
