@@ -1383,7 +1383,6 @@ def implement_split(scan_data, jk_list, string, n):
 
         jk_list[:] += odd[:, None, None] * int(2 ** n)
     elif string == 'dayn':
-
         # day/night split
         closetonight = extract_data_from_array(scan_data, 'night')
         
@@ -1432,6 +1431,34 @@ def implement_split(scan_data, jk_list, string, n):
         # sun_up split (sun elevation > -5 deg) 
         sunel = extract_data_from_array(scan_data, 'sun_el')
         jk_list[np.where(sunel > -5.0)] += int(2 ** n) 
+
+    elif string == 'wint':
+        mjd = extract_data_from_array(scan_data, 'mjd')
+        mid_winter = 58863  # 15. Jan 2020
+        days_since_mid_winter = (mjd - mid_winter) % 365                                                                                                                                                         
+        close_to_winter = np.minimum(np.abs(days_since_mid_winter), np.abs(365 - days_since_mid_winter))
+        cutoff = np.percentile(close_to_winter[accept_list], 50.0)
+        jk_list[np.where(close_to_winter > cutoff)] += int(2 ** n)
+
+    elif string == 'rise':
+        sid = extract_data_from_array(scan_data, 'sidereal')
+        if fieldname == 'co2':
+            cutoff = 87
+        elif fieldname == 'co6':
+            wh = np.where(sid > 180)
+            sid[wh] -= 360
+            cutoff = -75
+        elif fieldname == 'co7':
+            cutoff = 231
+        else:
+            print('Unknown field: ', fieldname, ' rising split invalid')
+            cutoff = 0
+        jk_list[np.where(sid < cutoff)] += int(2 ** n)
+
+    elif string == 'fpol':  ## fknee of second polyfilter component
+        fknee = extract_data_from_array(scan_data, 'fknee_poly1')
+        cutoff = np.percentile(fknee[accept_list], 50.0)
+        jk_list[np.where(fknee > cutoff)] += int(2 ** n) 
 
         ######## Here you can add new jack-knives  ############
         ### elif .......:
