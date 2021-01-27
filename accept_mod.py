@@ -1358,7 +1358,7 @@ def make_jk_list(params, accept_list, scan_list, scan_data, jk_param):
     
     strings, types, n_split = read_jk_param(jk_param)
     
-    cutoff_list = np.zeros((n_split), dtype='f')
+    cutoff_list = np.zeros((n_split-1), dtype='f')
     
     n_scans, n_det, n_sb, _ = scan_data.shape
     jk_list = np.zeros((n_scans, n_det, n_sb), dtype=np.int32)
@@ -1368,16 +1368,16 @@ def make_jk_list(params, accept_list, scan_list, scan_data, jk_param):
         return jk_list
     
     for j, string in enumerate(strings):
-        implement_split(scan_data, jk_list, string, j+1)
+        implement_split(scan_data, jk_list, cutoff_list, string, j+1)
 
     # insert 0 on rejected sidebands, add 1 on accepted 
     jk_list[np.invert(accept_list)] = 0
     jk_list[accept_list] += 1 
 
-    return jk_list
+    return jk_list, cutoff_list, strings
 
 
-def implement_split(scan_data, jk_list, string, n):
+def implement_split(scan_data, jk_list, cutoff_list, string, n):
 
     # even/odd
     if string == 'odde':
@@ -1385,65 +1385,65 @@ def implement_split(scan_data, jk_list, string, n):
         odd = np.array(obsid) % 2
 
         jk_list[:] += odd[:, None, None] * int(2 ** n)
-        cutoff_list[0] = 0.0 # placeholder (no real cutoff value)
+        cutoff_list[n-1] = 0.0 # placeholder (no real cutoff value)
     elif string == 'dayn':
         # day/night split
         closetonight = extract_data_from_array(scan_data, 'night')
         
         cutoff = np.percentile(closetonight[accept_list], 50.0)
         jk_list[np.where(closetonight > cutoff)] += int(2 ** n)
-        cutoff_list[1] = cutoff
+        cutoff_list[n-1] = cutoff
     elif string == 'half':
         # halfmission split
         mjd = extract_data_from_array(scan_data, 'mjd')
         cutoff = np.percentile(mjd[accept_list], 50.0)
         jk_list[np.where(mjd > cutoff)] += int(2 ** n)
-        cutoff_list[2] = cutoff
+        cutoff_list[n-1] = cutoff
     elif string == 'sdlb':
         # saddlebag split
         saddlebags = extract_data_from_array(scan_data, 'saddlebag')
         jk_list[np.where(saddlebags > 2.5)] += int(2 ** n)
-        cutoff_list[3]=0.0 # placeholder
+        cutoff_list[n-1]=0.0 # placeholder
         # sidereal time split 
         sid = extract_data_from_array(scan_data, 'sidereal')
         cutoff = np.percentile(sid[accept_list], 50.0)
         # print('Sidereal time cutoff: ', cutoff)
         jk_list[np.where(sid > cutoff)] += int(2 ** n) 
-        cutoff_list[4] = cutoff
+        cutoff_list[n-1] = cutoff
     elif string == 'cesc':
         fbit = extract_data_from_array(scan_data, 'fbit')
         jk_list[np.where(fbit == 32)] += int(2 ** n) 
-        cutoff_list[5] = 0.0 # placeholder
+        cutoff_list[n-1] = 0.0 # placeholder
     elif string == 'ambt':
         # ambient temperature split 
         ambt = extract_data_from_array(scan_data, 'airtemp')
         cutoff = np.percentile(ambt[accept_list], 50.0)
         jk_list[np.where(ambt > cutoff)] += int(2 ** n)
-        cutoff_list[6] = cutoff
+        cutoff_list[n-1] = cutoff
     elif string == 'elev':
         # elevation split 
         el = extract_data_from_array(scan_data, 'el')
         cutoff = np.percentile(el[accept_list], 50.0)
         jk_list[np.where(el > cutoff)] += int(2 ** n) 
-        cutoff_list[7] = cutoff
+        cutoff_list[n-1] = cutoff
     elif string == 'wind':
         # windspeed split 
         wind = extract_data_from_array(scan_data, 'windspeed')
         cutoff = np.percentile(wind[accept_list], 50.0)
         jk_list[np.where(wind > cutoff)] += int(2 ** n) 
-        cutoff_list[8] = cutoff
+        cutoff_list[n-1] = cutoff
     elif string == 'sune':
         # sun_elevation split 
         sunel = extract_data_from_array(scan_data, 'sun_el')
         cutoff = np.percentile(sunel[accept_list], 50.0)
         jk_list[np.where(sunel > cutoff)] += int(2 ** n)
-        cutoff_list[9] = cutoff
+        cutoff_list[n-1] = cutoff
 
     elif string == 'snup':
         # sun_up split (sun elevation > -5 deg) 
         sunel = extract_data_from_array(scan_data, 'sun_el')
         jk_list[np.where(sunel > -5.0)] += int(2 ** n) 
-        cutoff_list[10] = 0.0 # placeholder
+        cutoff_list[n-1] = 0.0 # placeholder
 
     elif string == 'wint':
         mjd = extract_data_from_array(scan_data, 'mjd')
@@ -1452,32 +1452,29 @@ def implement_split(scan_data, jk_list, string, n):
         close_to_winter = np.minimum(np.abs(days_since_mid_winter), np.abs(365 - days_since_mid_winter))
         cutoff = np.percentile(close_to_winter[accept_list], 50.0)
         jk_list[np.where(close_to_winter > cutoff)] += int(2 ** n)
-        cutoff_list[11] = cutoff
+        cutoff_list[n-1] = cutoff
 
     elif string == 'rise':
         sid = extract_data_from_array(scan_data, 'sidereal')
         if fieldname == 'co2':
             cutoff = 87
-            cutoff_list[12] = cutoff
         elif fieldname == 'co6':
             wh = np.where(sid > 180)
             sid[wh] -= 360
             cutoff = -75
-            cutoff_list[12] = cutoff
         elif fieldname == 'co7':
             cutoff = 231
-            cutoff_list[12] = cutoff
         else:
             print('Unknown field: ', fieldname, ' rising split invalid')
             cutoff = 0
         jk_list[np.where(sid < cutoff)] += int(2 ** n)
-        cutoff_list[12] = cutoff
+        cutoff_list[n-1] = cutoff
 
     elif string == 'fpol':  ## fknee of second polyfilter component
         fknee = extract_data_from_array(scan_data, 'fknee_poly1')
         cutoff = np.percentile(fknee[accept_list], 50.0)
         jk_list[np.where(fknee > cutoff)] += int(2 ** n)
-        cutoff_list[13] = cutoff
+        cutoff_list[n-1] = cutoff
 
         ######## Here you can add new jack-knives  ############
         ### elif .......:
@@ -1487,7 +1484,7 @@ def implement_split(scan_data, jk_list, string, n):
     return jk_list
 
 
-def save_jk_2_h5(params, scan_list, acceptrates, accept_list, jk_list, cutoff_list, fieldname): 
+def save_jk_2_h5(params, scan_list, acceptrates, accept_list, jk_list, cutoff_list, split_list, fieldname): 
     filename = data_folder + 'jk_data_' + id_string + jk_string + fieldname + '.h5'
     f1 = h5py.File(filename, 'w')
     f1.create_dataset('scan_list', data=scan_list)
@@ -1495,6 +1492,9 @@ def save_jk_2_h5(params, scan_list, acceptrates, accept_list, jk_list, cutoff_li
     f1.create_dataset('accept_list', data=accept_list)
     f1.create_dataset('jk_list', data=jk_list)
     f1.create_dataset('cutoff_list', data=cutoff_list)
+    dt = h5py.special_dtype(vlen=str) 
+    split_list_arr = np.array(split_list, dtype=dt)
+    f1.create_dataset('split_list', data=split_list_arr)
     f1.close()
 
 
@@ -1545,9 +1545,9 @@ if __name__ == "__main__":
         print('Saved scan data')
         accept_list, acc = make_accept_list(params, accept_params, scan_data)
         print('Made accept list')
-        jk_list, cutoff_list = make_jk_list(params, accept_list, scan_list, scan_data, jk_param_list_file)
+        jk_list, cutoff_list, split_list = make_jk_list(params, accept_list, scan_list, scan_data, jk_param_list_file)
         print('Made jk_list')
-        save_jk_2_h5(params, scan_list, acc, accept_list, jk_list, cutoff_list, fieldname)
+        save_jk_2_h5(params, scan_list, acc, accept_list, jk_list, cutoff_list, split_list, fieldname)
 
         if show_plot:
             labels = ['freq'] + stats_list 
