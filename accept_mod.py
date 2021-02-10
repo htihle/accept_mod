@@ -1332,14 +1332,15 @@ def make_accept_list(params, accept_params, scan_data):
     for i, stat_string in enumerate(stats_list):
         stats = extract_data_from_array(scan_data, stat_string)
         cuts = accept_params.stats_cut[stat_string]
-        accept_list[np.where(np.isnan(stats))] = False
         if (not np.isnan(cuts[0])):
             accept_list[np.where(stats < cuts[0])] = False
+            accept_list[np.where(np.isnan(stats))] = False
         if (not np.isnan(cuts[1])):
             accept_list[np.where(stats > cuts[1])] = False
+            accept_list[np.where(np.isnan(stats))] = False
         
         acc[i+1] = np.nansum(acceptrate[accept_list]) / (n_scans * 19 * 4)
-        print(acc[i+1], stat_string)
+        print(acc[i+1], stat_string, cuts)
 
     return accept_list, acc
 
@@ -1403,7 +1404,8 @@ def implement_split(scan_data, jk_list, cutoff_list, string, n):
         # saddlebag split
         saddlebags = extract_data_from_array(scan_data, 'saddlebag')
         jk_list[np.where(saddlebags > 2.5)] += int(2 ** n)
-        cutoff_list[n-1]=0.0 # placeholder
+        cutoff_list[n-1] = 0.0 # placeholder
+    elif string == 'sidr':
         # sidereal time split 
         sid = extract_data_from_array(scan_data, 'sidereal')
         cutoff = np.percentile(sid[accept_list], 50.0)
