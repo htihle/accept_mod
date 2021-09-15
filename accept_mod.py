@@ -23,6 +23,7 @@ import math
 import multiprocessing
 import importlib
 import warnings
+import shutil
 warnings.filterwarnings("ignore", message="invalid value encountered in true_divide")
 warnings.filterwarnings("ignore", message="invalid value encountered in power")
 warnings.filterwarnings("ignore", message="divide by zero encountered in true_divide")
@@ -282,7 +283,8 @@ def get_scan_stats(filepath, map_grid=None):
             pix2ind = my_file['pix2ind'][:]
             scanid = my_file['scanid'][()]
             feat = my_file['feature'][()]
-
+            
+            
             airtemp = np.mean(my_file['hk_airtemp'][()])
             dewtemp = np.mean(my_file['hk_dewtemp'][()])
             humidity = np.mean(my_file['hk_humidity'][()])
@@ -300,7 +302,11 @@ def get_scan_stats(filepath, map_grid=None):
             except KeyError:
                 sd_ind = np.zeros((3, n_det_ind, n_sb, 4, 1000))
             try:
-                tod_poly_ind = my_file['tod_poly'][()]
+                use_freq_filter = my_file['use_freq_filter'][()]
+                if not use_freq_filter:
+                    tod_poly_ind = my_file['tod_poly'][()]
+                else:
+                    tod_poly_ind = np.zeros((n_det_ind, n_sb, 2, n_samp))
             except KeyError:
                 tod_poly_ind = np.zeros((n_det_ind, n_sb, 2, n_samp))
             try: 
@@ -1306,7 +1312,7 @@ def get_patch_info(path):
         my_dict = { y[0]: y[1:7] for y in my_list[:-1] }
     return my_dict
 
-def save_data_2_h5(params, scan_list, scan_data, fieldname):
+def save_data_2_h5(params, scan_list, scan_data, fieldname, runid):
     filename = data_folder + 'scan_data_' + id_string + fieldname + '.h5'
     f1 = h5py.File(filename, 'w')
     f1.create_dataset('scan_list', data=scan_list)
@@ -1314,7 +1320,9 @@ def save_data_2_h5(params, scan_list, scan_data, fieldname):
     dt = h5py.special_dtype(vlen=str) 
     stats_list_arr = np.array(stats_list, dtype=dt)
     f1.create_dataset('stats_list', data=stats_list_arr)
+    f1.create_dataset("runID", data = runid)
     f1.close()
+    return filename
 
 
 def make_accept_list(params, accept_params, scan_data):
@@ -1486,7 +1494,7 @@ def implement_split(scan_data, jk_list, cutoff_list, string, n):
     return jk_list
 
 
-def save_jk_2_h5(params, scan_list, acceptrates, accept_list, jk_list, cutoff_list, split_list, fieldname): 
+def save_jk_2_h5(params, scan_list, acceptrates, accept_list, jk_list, cutoff_list, split_list, fieldname, runID): 
     filename = data_folder + 'jk_data_' + id_string + jk_string + fieldname + '.h5'
     f1 = h5py.File(filename, 'w')
     f1.create_dataset('scan_list', data=scan_list)
@@ -1497,8 +1505,19 @@ def save_jk_2_h5(params, scan_list, acceptrates, accept_list, jk_list, cutoff_li
     dt = h5py.special_dtype(vlen=str) 
     split_list_arr = np.array(split_list, dtype=dt)
     f1.create_dataset('split_list', data=split_list_arr)
+    f1.create_dataset("runID", data = runid)
     f1.close()
+    return filename
 
+def get_max_runID(folder):
+    file_list = os.listdir(folder)
+    file_list = [i for i in file_list if "param" in i]
+    runid_list = [int(i[:-4].split("_")[-1]) for i in file_list]
+    if len(runid_list) == 0:
+        maxid = 0
+    else:
+        maxid = np.max(np.array(runid_list))
+    return maxid
 
 if __name__ == "__main__":
     try:
@@ -1506,7 +1525,7 @@ if __name__ == "__main__":
     except IndexError:
         print('You need to provide param file as command-line argument')
         sys.exit()
-
+    
     params = get_params(param_file)
     #sys.path.append(params['ACCEPT_PARAM_FOLDER'])
     #accept_params = importlib.import_module(params['ACCEPT_PARAM_FOLDER'] + params['ACCEPT_MOD_PARAMS'][:-3])
@@ -1534,6 +1553,15 @@ if __name__ == "__main__":
     jk_param_list_file = params['JK_DEF_FILE']
     show_plot = params['SHOW_ACCEPT_PLOT']
 
+    scan_data_data_name_list = []
+    jk_data_name_list   = []
+    copy_folder = data_folder + "parameter_copies/"
+    
+    if not os.path.isdir(copy_folder):
+        os.mkdir(copy_folder)
+
+    runid = get_max_runID(copy_folder) + 1
+
     for fieldname in fields:
         if data_from_file:
             filepath = data_folder + 'scan_data_' + id_string + fieldname + '.h5'
@@ -1543,13 +1571,15 @@ if __name__ == "__main__":
         else:
             scan_list, scan_data = get_scan_data(params, fields, fieldname)
             print('Made scan data')
-        save_data_2_h5(params, scan_list, scan_data, fieldname)
+        scan_data_data_name = save_data_2_h5(params, scan_list, scan_data, fieldname, runid)
+        scan_data_data_name_list.append(scan_data_data_name)
         print('Saved scan data')
         accept_list, acc = make_accept_list(params, accept_params, scan_data)
         print('Made accept list')
         jk_list, cutoff_list, split_list = make_jk_list(params, accept_list, scan_list, scan_data, jk_param_list_file)
         print('Made jk_list')
-        save_jk_2_h5(params, scan_list, acc, accept_list, jk_list, cutoff_list, split_list, fieldname)
+        jk_data_name = save_jk_2_h5(params, scan_list, acc, accept_list, jk_list, cutoff_list, split_list, fieldname, runid)
+        jk_data_name_list.append(jk_data_name)
 
         if show_plot:
             labels = ['freq'] + stats_list 
@@ -1563,4 +1593,31 @@ if __name__ == "__main__":
         plt.tight_layout()
         plt.show()
 
+    accept_params_name = params['ACCEPT_PARAM_FOLDER'] + params['ACCEPT_MOD_PARAMS']
+    stats_list_name    = params['ACCEPT_PARAM_FOLDER'] + params['STATS_LIST']
+    
+    accept_params_name_raw = params['ACCEPT_MOD_PARAMS'][:-3]
+    stats_list_name_raw = params['STATS_LIST'][:-3]
+
+    param_file_copy_raw = param_file.split("/")
+    param_file_copy_raw = param_file_copy_raw[-1][:-4]
+    runlist_name    = params['RUNLIST']
+    runlist_copy_raw    = runlist_name.split("/")[-1][:-4]
+    jk_def_raw    = jk_param_list_file.split("/")[-1][:-4]
+
+    param_file_copy = copy_folder + param_file_copy_raw + f"_{runid:06d}" + ".txt"
+    runlist_copy = copy_folder + runlist_copy_raw + f"_{runid:06d}" + ".txt"
+    jk_def_copy = copy_folder + jk_def_raw + f"_{runid:06d}" + ".txt"
+    accept_params_name_copy = copy_folder + accept_params_name_raw + f"_{runid:06d}" + ".py"
+    stats_list_name_copy = copy_folder + stats_list_name_raw + f"_{runid:06d}" + ".py"
+
+
+    shutil.copyfile(param_file, param_file_copy)
+    shutil.copyfile(runlist_name, runlist_copy)
+    shutil.copyfile(jk_param_list_file, jk_def_copy)
+    shutil.copyfile(accept_params_name, accept_params_name_copy)
+    shutil.copyfile(stats_list_name, stats_list_name_copy)
+  
+
+        
 
