@@ -282,7 +282,8 @@ def get_scan_stats(filepath, map_grid=None):
             pix2ind = my_file['pix2ind'][:]
             scanid = my_file['scanid'][()]
             feat = my_file['feature'][()]
-
+            
+            
             airtemp = np.mean(my_file['hk_airtemp'][()])
             dewtemp = np.mean(my_file['hk_dewtemp'][()])
             humidity = np.mean(my_file['hk_humidity'][()])
@@ -300,7 +301,11 @@ def get_scan_stats(filepath, map_grid=None):
             except KeyError:
                 sd_ind = np.zeros((3, n_det_ind, n_sb, 4, 1000))
             try:
-                tod_poly_ind = my_file['tod_poly'][()]
+                use_freq_filter = my_file['use_freq_filter'][()]
+                if not use_freq_filter:
+                    tod_poly_ind = my_file['tod_poly'][()]
+                else:
+                    tod_poly_ind = np.zeros((n_det_ind, n_sb, 2, n_samp))
             except KeyError:
                 tod_poly_ind = np.zeros((n_det_ind, n_sb, 2, n_samp))
             try: 
