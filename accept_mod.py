@@ -299,7 +299,7 @@ def get_scan_stats(filepath, map_grid=None):
                 point_amp_ind = np.zeros((n_det_ind, n_sb, 1024, 2))
             try: 
                 sd_ind = np.array(my_file['spike_data'])
-            except KeyError:
+            except:
                 sd_ind = np.zeros((3, n_det_ind, n_sb, 4, 1000))
             try:
                 use_freq_filter = my_file['use_freq_filter'][()]
