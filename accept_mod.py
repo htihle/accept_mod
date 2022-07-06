@@ -299,6 +299,8 @@ def get_scan_stats(filepath, map_grid=None):
                 point_amp_ind = np.zeros((n_det_ind, n_sb, 1024, 2))
             try: 
                 sd_ind = np.array(my_file['spike_data'])
+                if (sd_ind.shape[0] == 0):
+                    sd_ind = np.zeros((3, n_det_ind, n_sb, 4, 1000))
             except:
                 sd_ind = np.zeros((3, n_det_ind, n_sb, 4, 1000))
             try:
@@ -792,17 +794,17 @@ def get_scan_stats(filepath, map_grid=None):
 
     ### perhaps a ps_xy and ps_z to distinguish frequency residuals from angular ones
     
-    filename = '/mn/stornext/d16/cmbco/comap/protodir/sw_complete_' + fieldname + '.h5'
+    filename = '/mn/stornext/d22/cmbco/comap/d16/protodir/sw_complete_' + fieldname + '.h5'
     i_scan = int(str(scanid)[-2:]) - 2  # goes from 0 to n_scan
     #print(scanid, i_scan)
     n_sw = 14
     sw_array = np.zeros((n_det, n_sw, n_sb))
     try:
         with h5py.File(filename, mode="r") as my_file:
-            sw = my_file['%07i/sw_stats' % obsid][()][:, i_scan]
+             sw = my_file['%07i/sw_stats' % obsid][()][:, i_scan]
         sw_array[:, :, :] = sw[:, :, None]
     except:
-        print('problems with standing waves')
+        # print('problems with standing waves')
         sw_array[:, :, :] = np.nan
 
     for i in range(n_sw):
@@ -925,7 +927,7 @@ def get_scan_data(params, fields, fieldname, paralellize=True):
     scan_data = np.zeros((n_scans, n_feeds, n_sb, n_stats), dtype=np.float32)
  
     if paralellize:
-        pool = multiprocessing.Pool(100)    
+        pool = multiprocessing.Pool(100)
 
         i_scan = 0
         obsid_infos = []
@@ -939,7 +941,7 @@ def get_scan_data(params, fields, fieldname, paralellize=True):
             obsid_infos.append(obsid_info)
             scan_list[i_scan:i_scan+n_scans] = scans
             i_scan += n_scans
-        scan_data_list = list(pool.map(get_obsid_data, obsid_infos))
+        scan_data_list = list(pool.map(get_obsid_data, obsid_infos, chunksize=1))
         print('Done with parallell')
         i = 0
         i_scan = 0
@@ -1103,9 +1105,10 @@ def get_power_spectra(maps, map_grid):
                     ps_z_s_sb_chi2[l, i, j], ps_xy_s_sb_chi2[l, i, j] = get_ps_1d2d_chi2(map, rms, n_k, d_th, dz)
                     chi2 = ps_s_sb_chi2[l, i, j]
                     if np.isnan(chi2):
+                        print("Nan in chi2")
                         print(map[np.isnan(map)])
                         print(rms[np.isnan(rms)])
-                        sys.exit()
+                        # sys.exit()
                     map_feed[:, :, j, :] = map
                     rms_feed[:, :, j, :] = rms
                     
@@ -1364,7 +1367,7 @@ def read_jk_param(filepath):
 
 
 def make_jk_list(params, accept_list, scan_list, scan_data, jk_param):
-    
+    print("hei", accept_list.shape, np.any(accept_list)) 
     strings, types, n_split = read_jk_param(jk_param)
     
     cutoff_list = np.zeros((n_split-1), dtype='f')
@@ -1382,7 +1385,7 @@ def make_jk_list(params, accept_list, scan_list, scan_data, jk_param):
     # insert 0 on rejected sidebands, add 1 on accepted 
     jk_list[np.invert(accept_list)] = 0
     jk_list[accept_list] += 1 
-
+    print("hei", jk_list, cutoff_list, strings) 
     return jk_list, cutoff_list, strings
 
 
@@ -1570,12 +1573,13 @@ if __name__ == "__main__":
                 scan_data = my_file['scan_data'][()]
         else:
             scan_list, scan_data = get_scan_data(params, fields, fieldname)
-            print('Made scan data')
+
         scan_data_data_name = save_data_2_h5(params, scan_list, scan_data, fieldname, runid)
         scan_data_data_name_list.append(scan_data_data_name)
         print('Saved scan data')
         accept_list, acc = make_accept_list(params, accept_params, scan_data)
         print('Made accept list')
+        print(len(make_jk_list(params, accept_list, scan_list, scan_data, jk_param_list_file)))
         jk_list, cutoff_list, split_list = make_jk_list(params, accept_list, scan_list, scan_data, jk_param_list_file)
         print('Made jk_list')
         jk_data_name = save_jk_2_h5(params, scan_list, acc, accept_list, jk_list, cutoff_list, split_list, fieldname, runid)
