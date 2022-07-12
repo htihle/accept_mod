@@ -1338,6 +1338,8 @@ def make_accept_list(params, accept_params, scan_data):
     accept_list = np.ones((n_scans, n_det, n_sb), dtype=np.bool)
     reject_reason = np.zeros((n_scans, n_det, n_sb, 100), dtype=np.bool)
 
+    temp_bool = np.zeros((n_scans, n_det, n_sb), dtype=np.bool)
+
     # decline all sidebands that are entirely masked
     acceptrate = extract_data_from_array(scan_data, 'acceptrate')
 
@@ -1349,16 +1351,23 @@ def make_accept_list(params, accept_params, scan_data):
     for i, stat_string in enumerate(stats_list):
         stats = extract_data_from_array(scan_data, stat_string)
         cuts = accept_params.stats_cut[stat_string]
+        temp_bool[:, :, :] = False
         if (not np.isnan(cuts[0])):
             accept_list[np.where(stats < cuts[0])] = False
             accept_list[np.where(np.isnan(stats))] = False
-            reject_reason[:, :, :, i][np.argwhere(stats < cuts[0])] = True
-            reject_reason[:, :, :, i][np.argwhere(np.isnan(stats))] = True
+            temp_bool[np.where(stats < cuts[0])] = True
+            temp_bool[np.where(np.isnan(stats))] = True
+            reject_reason[:, :, :, i] = temp_bool
+            # reject_reason[:, :, :, i][np.argwhere(stats < cuts[0])] = True
+            # reject_reason[:, :, :, i][np.argwhere(np.isnan(stats))] = True
         if (not np.isnan(cuts[1])):
             accept_list[np.where(stats > cuts[1])] = False
             accept_list[np.where(np.isnan(stats))] = False
-            reject_reason[:, :, :, i][np.argwhere(stats < cuts[1])] = True
-            reject_reason[:, :, :, i][np.argwhere(np.isnan(stats))] = True
+            temp_bool[np.where(stats < cuts[0])] = True
+            temp_bool[np.where(np.isnan(stats))] = True
+            reject_reason[:, :, :, i] = temp_bool
+            # reject_reason[:, :, :, i][np.argwhere(stats < cuts[1])] = True
+            # reject_reason[:, :, :, i][np.argwhere(np.isnan(stats))] = True
         
         acc[i+1] = np.nansum(acceptrate[accept_list]) / (n_scans * 19 * 4)
         print(acc[i+1], stat_string, cuts)
