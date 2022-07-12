@@ -1352,13 +1352,13 @@ def make_accept_list(params, accept_params, scan_data):
         if (not np.isnan(cuts[0])):
             accept_list[np.where(stats < cuts[0])] = False
             accept_list[np.where(np.isnan(stats))] = False
-            reject_reason[:, :, :, i][np.where(stats < cuts[0])] = True
-            reject_reason[:, :, :, i][np.where(np.isnan(stats))] = True
+            reject_reason[:, :, :, i][np.argwhere(stats < cuts[0])] = True
+            reject_reason[:, :, :, i][np.argwhere(np.isnan(stats))] = True
         if (not np.isnan(cuts[1])):
             accept_list[np.where(stats > cuts[1])] = False
             accept_list[np.where(np.isnan(stats))] = False
-            reject_reason[:, :, :, i][np.where(stats < cuts[1])] = True
-            reject_reason[:, :, :, i][np.where(np.isnan(stats))] = True
+            reject_reason[:, :, :, i][np.argwhere(stats < cuts[1])] = True
+            reject_reason[:, :, :, i][np.argwhere(np.isnan(stats))] = True
         
         acc[i+1] = np.nansum(acceptrate[accept_list]) / (n_scans * 19 * 4)
         print(acc[i+1], stat_string, cuts)
