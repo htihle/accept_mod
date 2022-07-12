@@ -1387,7 +1387,7 @@ def make_jk_list(params, accept_list, scan_list, scan_data, jk_param):
 
     if not np.any(accept_list.flatten()):
         jk_list[:] = 0 
-        return jk_list
+        return jk_list, cutoff_list, strings
     
     for j, string in enumerate(strings):
         implement_split(scan_data, jk_list, cutoff_list, string, j+1)
