@@ -29,7 +29,6 @@ warnings.filterwarnings("ignore", message="invalid value encountered in power")
 warnings.filterwarnings("ignore", message="divide by zero encountered in true_divide")
 os.environ["OMP_NUM_THREADS"] = "1"
 
-
 class spike_data():
     def __init__(self):
         self.spike_types = ['spike', 'jump', 'anomaly', 'edge spike']
