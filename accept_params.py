@@ -1,5 +1,7 @@
 
 stats_cut = {
+    'obsid': [float("nan"), float("nan")],
+    'scanid': [float("nan"), float("nan")],
     'mjd': [float("nan"), float("nan")],
     'night': [0.0, 12.0],
     'sidereal': [0.0, 360.0],

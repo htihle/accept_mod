@@ -1,4 +1,6 @@
 stats_list = [
+    'obsid',         # Obisd of the scan
+    'scanid',        # scanid
     'mjd',           # mean MJD of scan
     'night',         # distance in h from 2 AM (UTC - 7)
     'sidereal',      # sidereal time in degrees (up to a phase)

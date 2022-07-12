@@ -434,6 +434,11 @@ def get_scan_stats(filepath, map_grid=None):
     ampl[np.where(ampl == 0)] = np.nan
 
     # Here comes the different diagnostic data that is calculated
+    # Obsid
+    insert_data_in_array(data, obsid, 'obsid')
+
+    # Scanid
+    insert_data_in_array(data, scanid, 'obsid')
 
     # MJD
     scan_mjd = 0.5 * (mjd[0] + mjd[-1]) 
