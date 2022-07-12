@@ -437,7 +437,7 @@ def get_scan_stats(filepath, map_grid=None):
     insert_data_in_array(data, obsid, 'obsid')
 
     # Scanid
-    insert_data_in_array(data, scanid, 'obsid')
+    insert_data_in_array(data, scanid, 'scanid')
 
     # MJD
     scan_mjd = 0.5 * (mjd[0] + mjd[-1]) 
@@ -1336,6 +1336,7 @@ def save_data_2_h5(params, scan_list, scan_data, fieldname, runid):
 def make_accept_list(params, accept_params, scan_data):
     n_scans, n_det, n_sb, _ = scan_data.shape
     accept_list = np.ones((n_scans, n_det, n_sb), dtype=np.bool)
+    reject_reason = np.zeros((n_scans, n_det, n_sb, 100), dtype=np.bool)
 
     # decline all sidebands that are entirely masked
     acceptrate = extract_data_from_array(scan_data, 'acceptrate')
@@ -1351,14 +1352,18 @@ def make_accept_list(params, accept_params, scan_data):
         if (not np.isnan(cuts[0])):
             accept_list[np.where(stats < cuts[0])] = False
             accept_list[np.where(np.isnan(stats))] = False
+            reject_reason[:, :, :, i][np.where(stats < cuts[0])] = True
+            reject_reason[:, :, :, i][np.where(np.isnan(stats))] = True
         if (not np.isnan(cuts[1])):
             accept_list[np.where(stats > cuts[1])] = False
             accept_list[np.where(np.isnan(stats))] = False
+            reject_reason[:, :, :, i][np.where(stats < cuts[1])] = True
+            reject_reason[:, :, :, i][np.where(np.isnan(stats))] = True
         
         acc[i+1] = np.nansum(acceptrate[accept_list]) / (n_scans * 19 * 4)
         print(acc[i+1], stat_string, cuts)
 
-    return accept_list, acc
+    return accept_list, reject_reason, acc
 
 
 def read_jk_param(filepath):
@@ -1502,15 +1507,18 @@ def implement_split(scan_data, jk_list, cutoff_list, string, n):
     return jk_list
 
 
-def save_jk_2_h5(params, scan_list, acceptrates, accept_list, jk_list, cutoff_list, split_list, fieldname, runID): 
+def save_jk_2_h5(params, scan_list, acceptrates, accept_list, reject_reason, jk_list, cutoff_list, split_list, fieldname, runID): 
     filename = data_folder + 'jk_data_' + id_string + jk_string + fieldname + '.h5'
     f1 = h5py.File(filename, 'w')
     f1.create_dataset('scan_list', data=scan_list)
     f1.create_dataset('acceptrates', data=acceptrates)
     f1.create_dataset('accept_list', data=accept_list)
+    f1.create_dataset('reject_reason', data=reject_reason)
     f1.create_dataset('jk_list', data=jk_list)
     f1.create_dataset('cutoff_list', data=cutoff_list)
-    dt = h5py.special_dtype(vlen=str) 
+    dt = h5py.special_dtype(vlen=str)
+    stats_list_arr = np.array(stats_list, dtype=dt)
+    f1.create_dataset('stats_list', data=stats_list_arr)
     split_list_arr = np.array(split_list, dtype=dt)
     f1.create_dataset('split_list', data=split_list_arr)
     f1.create_dataset("runID", data = runid)
@@ -1582,12 +1590,12 @@ if __name__ == "__main__":
         scan_data_data_name = save_data_2_h5(params, scan_list, scan_data, fieldname, runid)
         scan_data_data_name_list.append(scan_data_data_name)
         print('Saved scan data')
-        accept_list, acc = make_accept_list(params, accept_params, scan_data)
+        accept_list, reject_reason, acc = make_accept_list(params, accept_params, scan_data)
         print('Made accept list')
         print(len(make_jk_list(params, accept_list, scan_list, scan_data, jk_param_list_file)))
         jk_list, cutoff_list, split_list = make_jk_list(params, accept_list, scan_list, scan_data, jk_param_list_file)
         print('Made jk_list')
-        jk_data_name = save_jk_2_h5(params, scan_list, acc, accept_list, jk_list, cutoff_list, split_list, fieldname, runid)
+        jk_data_name = save_jk_2_h5(params, scan_list, acc, accept_list, reject_reason, jk_list, cutoff_list, split_list, fieldname, runid)
         jk_data_name_list.append(jk_data_name)
 
         if show_plot:
