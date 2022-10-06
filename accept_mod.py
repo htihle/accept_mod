@@ -1367,7 +1367,7 @@ def make_accept_list(params, accept_params, scan_data):
         if (not np.isnan(cuts[1])):
             accept_list[np.where(stats > cuts[1])] = False
             accept_list[np.where(np.isnan(stats))] = False
-            temp_bool[np.where(stats < cuts[0])] = True
+            temp_bool[np.where(stats > cuts[1])] = True
             temp_bool[np.where(np.isnan(stats))] = True
             reject_reason[:, :, :, i] = temp_bool
             # reject_reason[:, :, :, i][np.argwhere(stats < cuts[1])] = True
