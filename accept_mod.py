@@ -213,6 +213,8 @@ def get_params(param_file):
 
 def read_runlist(params):
     filename = params['RUNLIST']
+    obsid_start = int(params['EARLIEST_OBSID'])
+    obsid_stop = int(params['LATEST_OBSID'])
 
     with open(filename) as my_file:
         lines = [line.split() for line in my_file]
@@ -227,7 +229,6 @@ def read_runlist(params):
         n_scans_tot = 0
         fieldname = lines[i][0]
         n_obsids = int(lines[i][1])
-        print(fieldname)
         i = i + 1
         for j in range(n_obsids):
             obsid = lines[i][0]
@@ -236,11 +237,14 @@ def read_runlist(params):
             o_scans = []
             for k in range(1, n_scans - 1):
                 if lines[i+k+1][0] != 8192:
-                    o_scans.append(lines[i+k+1][0])
-                    n_scans_tot += 1
+                    if obsid_start <= int(obsid) <= obsid_stop:
+                        # print(obsid_start, int(obsid), obsid_stop)
+                        o_scans.append(lines[i+k+1][0])
+                        n_scans_tot += 1
             scans[obsid] = o_scans
             i = i + n_scans + 1 
         fields[fieldname] = [obsids, scans, n_scans_tot]
+        print(fieldname, n_scans_tot)
     return fields
 
 
@@ -932,7 +936,7 @@ def get_scan_data(params, fields, fieldname, paralellize=True):
     scan_data = np.zeros((n_scans, n_feeds, n_sb, n_stats), dtype=np.float32)
  
     if paralellize:
-        pool = multiprocessing.Pool(100)
+        pool = multiprocessing.Pool(128)
 
         i_scan = 0
         obsid_infos = []
@@ -1109,10 +1113,10 @@ def get_power_spectra(maps, map_grid):
                     ps_s_sb_chi2[l, i, j] = get_ps_chi2(map, rms, n_k, d_th, dz)  # , Pk, ps_mean, ps_std, transfer 
                     ps_z_s_sb_chi2[l, i, j], ps_xy_s_sb_chi2[l, i, j] = get_ps_1d2d_chi2(map, rms, n_k, d_th, dz)
                     chi2 = ps_s_sb_chi2[l, i, j]
-                    if np.isnan(chi2):
-                        print("Nan in chi2")
-                        print(map[np.isnan(map)])
-                        print(rms[np.isnan(rms)])
+                    # if np.isnan(chi2):
+                    #     print("Nan in chi2")
+                    #     print(map[np.isnan(map)])
+                    #     print(rms[np.isnan(rms)])
                         # sys.exit()
                     map_feed[:, :, j, :] = map
                     rms_feed[:, :, j, :] = rms
@@ -1386,7 +1390,7 @@ def read_jk_param(filepath):
 
 
 def make_jk_list(params, accept_list, scan_list, scan_data, jk_param):
-    print("hei", accept_list.shape, np.any(accept_list)) 
+    # print("hei", accept_list.shape, np.any(accept_list)) 
     strings, types, n_split = read_jk_param(jk_param)
     
     cutoff_list = np.zeros((n_split-1), dtype='f')
@@ -1404,7 +1408,7 @@ def make_jk_list(params, accept_list, scan_list, scan_data, jk_param):
     # insert 0 on rejected sidebands, add 1 on accepted 
     jk_list[np.invert(accept_list)] = 0
     jk_list[accept_list] += 1 
-    print("hei", jk_list, cutoff_list, strings) 
+    # print("hei", jk_list, cutoff_list, strings) 
     return jk_list, cutoff_list, strings
 
 
