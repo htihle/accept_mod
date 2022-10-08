@@ -308,11 +308,7 @@ def get_scan_stats(filepath, map_grid=None):
             except:
                 sd_ind = np.zeros((3, n_det_ind, n_sb, 4, 1000))
             try:
-                use_freq_filter = my_file['use_freq_filter'][()]
-                if not use_freq_filter:
-                    tod_poly_ind = my_file['tod_poly'][()]
-                else:
-                    tod_poly_ind = np.zeros((n_det_ind, n_sb, 2, n_samp))
+                tod_poly_ind = my_file['tod_poly'][()]
             except KeyError:
                 tod_poly_ind = np.zeros((n_det_ind, n_sb, 2, n_samp))
             try: 
