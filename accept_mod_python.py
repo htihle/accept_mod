@@ -193,35 +193,35 @@ def ensure_dir_exists(path):
             raise
 
 
-def get_params(param_file):
-    params = {}
-    with open(param_file) as f:
-        fr = f.readlines()
+# def get_params(param_file):
+#     params = {}
+#     with open(param_file) as f:
+#         fr = f.readlines()
 
-        fr = [f[:] for f in fr]
+#         fr = [f[:] for f in fr]
 
-        frs = [f.split(" = ") for f in fr]
+#         frs = [f.split(" = ") for f in fr]
 
-        for stuff in frs:
-            try:
-                i, j = stuff
-                params[str(i).strip()] = eval(j)
-            except ValueError:
-                pass
-            except SyntaxError:
-                if j == '.true.':
-                    params[str(i).strip()] = True
-                elif j == '.false.':
-                    params[str(i).strip()] = False
-                else:
-                    pass
-    return params
+#         for stuff in frs:
+#             try:
+#                 i, j = stuff
+#                 params[str(i).strip()] = eval(j)
+#             except ValueError:
+#                 pass
+#             except SyntaxError:
+#                 if j == '.true.':
+#                     params[str(i).strip()] = True
+#                 elif j == '.false.':
+#                     params[str(i).strip()] = False
+#                 else:
+#                     pass
+#     return params
 
 
 def read_runlist(params):
-    filename = params['RUNLIST']
-    obsid_start = int(params['EARLIEST_OBSID'])
-    obsid_stop = int(params['LATEST_OBSID'])
+    filename = params['runlist']
+    obsid_start = int(params['obsid_start'])
+    obsid_stop = int(params['obsid_stop'])
 
     with open(filename) as my_file:
         lines = [line.split() for line in my_file]
@@ -276,7 +276,11 @@ def extract_data_from_array(data, stats_string):
 
 def get_scan_stats(filepath, map_grid=None):
     n_stats = len(stats_list)
-    # try:
+    try:
+        with h5py.File(filepath, mode="r") as my_file:
+            pass
+    except:
+        print(f"CANNOT OPEN CORRUPT OR NON-EXISTING FILE: {filepath}")
     with h5py.File(filepath, mode="r") as my_file:
         tod_ind = np.array(my_file['tod'][:])
         tod_ind[~np.isfinite(tod_ind)] = 0
@@ -310,12 +314,12 @@ def get_scan_stats(filepath, map_grid=None):
         winddir = np.mean(my_file['hk_winddir'][()])
         windspeed = np.mean(my_file['hk_windspeed'][()])
         
-        # try:
-        point_amp_ind = my_file['el_az_amp'][:,:,:,:2]
+        try:
+            point_amp_ind = my_file['el_az_amp'][:,:,:,:2]
             # point_amp_ind = np.nanmean(my_file['el_az_stats'][()], axis=3) #### mean over chunk axis
             # 3, 19, 4, 1024 => 19, 4, 1024, 2
-        # except:
-        #     point_amp_ind = np.zeros((n_det_ind, n_sb, 1024, 2))
+        except:
+            point_amp_ind = np.zeros((n_det_ind, n_sb, 1024, 2))
         try: 
             sd_ind = np.array(my_file['spike_data'])
             if (sd_ind.shape[0] == 0):
@@ -341,16 +345,25 @@ def get_scan_stats(filepath, map_grid=None):
         except KeyError:
             acc_ind = np.zeros_like(tod_ind[:,:,0,0])
             print("Found no acceptrate")
-        time = np.array(my_file['tod_time'])
-        mjd = time
         try:
-            pca = np.array(my_file['pca_comp'])
+            time = np.array(my_file['tod_time'])
+        except:
+            time = np.array(my_file['time'])
+        mjd = time
+
+        ampl_ind = np.zeros((4, *mask_full_ind.shape))
+        pca = np.zeros((4, time.shape[-1]))
+        try:
             # eigv = np.array(my_file['pca_eigv'])
-            ampl_ind = np.array(my_file['pca_ampl'])
+            if np.array(my_file['pca_ampl']).shape[0] >= 4:
+                ampl_ind[:4] = np.array(my_file['pca_ampl'])[:4]
+                pca[:4] = np.array(my_file['pca_comp'])[:4]
+            else:
+                ampl_ind[:np.array(my_file['pca_ampl']).shape[0]] = np.array(my_file['pca_ampl'])[:]
+                pca[:np.array(my_file['pca_comp']).shape[0]] = np.array(my_file['pca_comp'])[:]
         except KeyError:
             pca = np.zeros((4, 10000))
             # eigv = np.zeros(0)
-            ampl_ind = np.zeros((4, *mask_full_ind.shape))
             print('Found no pca comps', scanid)
         try:
             tsys_ind = np.array(my_file['Tsys_lowres'])
@@ -944,7 +957,7 @@ class ObsidData():
         pass
 
 def get_scan_data(params, fields, fieldname, paralellize=True):
-    l2_path = params['LEVEL2_DIR']
+    l2_path = params['level2_dir']
     field = fields[fieldname]
     n_scans = field[2]
     n_feeds = 20
@@ -1040,7 +1053,7 @@ def get_obsid_data(obsid_info):
     maps = []
     i_scan = 0
     for scanid in scans:
-        filepath = l2_path + '/' + fieldname + '/' + fieldname + '_0' + scanid + '.h5'
+        filepath = os.path.join(l2_path, fieldname) + '/' + fieldname + '_0' + scanid + '.h5'
         #filepath = l2_path + '/' + fieldname + '_0' + scanid + '.h5'
         data, map = get_scan_stats(filepath, map_grid)
         scan_data[i_scan] = data
@@ -1566,38 +1579,46 @@ def get_max_runID(folder):
     return maxid
 
 if __name__ == "__main__":
-    try:
-        param_file = sys.argv[1]
-    except IndexError:
-        print('You need to provide param file as command-line argument')
-        sys.exit()
+    # try:
+    #     param_file = sys.argv[1]
+    # except IndexError:
+    #     print('You need to provide param file as command-line argument')
+    #     sys.exit()
     
-    params = get_params(param_file)
-    #sys.path.append(params['ACCEPT_PARAM_FOLDER'])
-    #accept_params = importlib.import_module(params['ACCEPT_PARAM_FOLDER'] + params['ACCEPT_MOD_PARAMS'][:-3])
-    spec = importlib.util.spec_from_file_location(params['ACCEPT_MOD_PARAMS'][:-3], params['ACCEPT_PARAM_FOLDER'] + params['ACCEPT_MOD_PARAMS'])
+    # params = get_params(param_file)
+    #sys.path.append(params['accept_param_folder'])
+    #accept_params = importlib.import_module(params['accept_param_folder'] + params['accept_mod_params'][:-3])
+    sys.path.append("/mn/stornext/d22/cmbco/comap/jonas/l2gen_python")  # TODO: Not use hard-coded path.
+    from l2gen_argparser import parser
+    params = parser.parse_args()
+    if not params.runlist:
+        raise ValueError("A runlist must be specified in parameter file or terminal.")
+    param_file = params.param
+    params = vars(params)  # Accept-mod was written with params as a dict, so we just do Namespace -> dict so I don't have to rewrite stuff.
+
+    spec = importlib.util.spec_from_file_location(params['accept_mod_params'][:-3], params['accept_param_folder'] + params['accept_mod_params'])
     accept_params = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(accept_params)
-    spec = importlib.util.spec_from_file_location(params['STATS_LIST'][:-3], params['ACCEPT_PARAM_FOLDER'] + params['STATS_LIST'])    
+    spec = importlib.util.spec_from_file_location(params['stats_list'][:-3], params['accept_param_folder'] + params['stats_list'])    
     stats_list = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(stats_list)
     stats_list = stats_list.stats_list
     fields = read_runlist(params)
 
-    patch_filepath = params['PATCH_DEFINITION_FILE']
+    patch_filepath = params['patch_definition_file']
     patch_info = get_patch_info(patch_filepath)
 
-    weather_filepath = params['WEATHER_FILEPATH']
-    data_folder = params['ACCEPT_DATA_FOLDER']
-    id_string = params['ACCEPT_DATA_ID_STRING'] + '_'
-    jk_string = params['JK_DATA_STRING'] + '_'
+    weather_filepath = params['weather_filepath']
+    data_folder = params['accept_data_folder']
+    id_string = params['accept_data_id_string'] + '_'
+    jk_string = params['jk_data_string'] + '_'
     if id_string == '_':
         id_string = ''
     if jk_string == '_':
         jk_string = ''
-    data_from_file = params['SCAN_STATS_FROM_FILE'] # False #True
-    jk_param_list_file = params['JK_DEF_FILE']
-    show_plot = params['SHOW_ACCEPT_PLOT']
+    data_from_file = params['scan_stats_from_file'] # False #True
+    jk_param_list_file = params['jk_def_file']
+    show_plot = params['show_accept_plot']
 
     scan_data_data_name_list = []
     jk_data_name_list   = []
@@ -1639,26 +1660,26 @@ if __name__ == "__main__":
         plt.tight_layout()
         plt.show()
 
-    accept_params_name = params['ACCEPT_PARAM_FOLDER'] + params['ACCEPT_MOD_PARAMS']
-    stats_list_name    = params['ACCEPT_PARAM_FOLDER'] + params['STATS_LIST']
+    accept_params_name = params['accept_param_folder'] + params['accept_mod_params']
+    stats_list_name    = params['accept_param_folder'] + params['stats_list']
     
-    accept_params_name_raw = params['ACCEPT_MOD_PARAMS'][:-3]
-    stats_list_name_raw = params['STATS_LIST'][:-3]
+    accept_params_name_raw = params['accept_mod_params'][:-3]
+    stats_list_name_raw = params['stats_list'][:-3]
 
-    param_file_copy_raw = param_file.split("/")
-    param_file_copy_raw = param_file_copy_raw[-1][:-4]
-    runlist_name    = params['RUNLIST']
+    # param_file_copy_raw = param_file.split("/")
+    # param_file_copy_raw = param_file_copy_raw[-1][:-4]
+    runlist_name    = params['runlist']
     runlist_copy_raw    = runlist_name.split("/")[-1][:-4]
     jk_def_raw    = jk_param_list_file.split("/")[-1][:-4]
 
-    param_file_copy = copy_folder + param_file_copy_raw + f"_{runid:06d}" + ".txt"
+    # param_file_copy = copy_folder + param_file_copy_raw + f"_{runid:06d}" + ".txt"
     runlist_copy = copy_folder + runlist_copy_raw + f"_{runid:06d}" + ".txt"
     jk_def_copy = copy_folder + jk_def_raw + f"_{runid:06d}" + ".txt"
     accept_params_name_copy = copy_folder + accept_params_name_raw + f"_{runid:06d}" + ".py"
     stats_list_name_copy = copy_folder + stats_list_name_raw + f"_{runid:06d}" + ".py"
 
 
-    shutil.copyfile(param_file, param_file_copy)
+    # shutil.copyfile(param_file, param_file_copy)
     shutil.copyfile(runlist_name, runlist_copy)
     shutil.copyfile(jk_param_list_file, jk_def_copy)
     shutil.copyfile(accept_params_name, accept_params_name_copy)
