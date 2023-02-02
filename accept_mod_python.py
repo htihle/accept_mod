@@ -291,6 +291,10 @@ def get_scan_stats(filepath, map_grid=None):
         point_radec_ind = np.array(my_file['point_cel'][:])
         # mask_ind = my_file['freqmask'][:]
         # mask_full_ind = my_file['freqmask_full'][:]
+        try:
+            temporal_mask_ind = my_file['mask_temporal'][()]
+        except:
+            temporal_mask_ind = np.ones((n_det_ind, n_samp), dtype=bool)
         mask_ind = my_file['freqmask'][:]
         mask_full_ind = my_file['freqmask_full'][:]
         reason_ind = my_file['freqmask_reason'][:]
@@ -345,6 +349,19 @@ def get_scan_stats(filepath, map_grid=None):
         except KeyError:
             acc_ind = np.zeros_like(tod_ind[:,:,0,0])
             print("Found no acceptrate")
+
+        freqmask_reason = my_file['freqmask_reason'][()]
+        freqmask_reason_string = my_file['freqmask_reason_string'][()]
+        specific_freqmask = np.ones_like(mask_full_ind)
+        for k in range(len(freqmask_reason_string)):
+            _freqmask = (freqmask_reason == 2**k) == 0
+            if freqmask_reason_string[k] not in ["Aliasing suppression (AB_mask)", "Aliasing suppression (leak_mask)",
+                                                 "Tsys NaN or inf", "Tsys < min_tsys", "Tsys > running median max",
+                                                 "Feed 20", "NaN or inf in TOD", "Marked channels"]:
+                specific_freqmask *= _freqmask
+        acc_ind_specific = np.mean(specific_freqmask, axis=-1)
+        
+        
         try:
             time = np.array(my_file['tod_time'])
         except:
@@ -393,10 +410,12 @@ def get_scan_stats(filepath, map_grid=None):
 
     ## transform to full arrays with all pixels
     tod = np.zeros((n_det, n_sb, n_freq, n_samp))
+    temporal_mask = np.zeros((n_det, n_samp), dtype=bool)
     mask = np.zeros((n_det, n_sb, n_freq))
     mask_full = np.zeros((n_det, n_sb, n_freq_hr))
     # n_nan = np.zeros((n_det, n_sb, n_freq_hr))
     acc = np.zeros((n_det, n_sb))
+    acc_specific = np.zeros((n_det, n_sb))
     ampl = np.zeros((4, n_det, n_sb, n_freq_hr))
     tsys = np.zeros((n_det, n_sb, n_freq))
     chi2 = np.zeros((n_det, n_sb, n_freq))
@@ -410,11 +429,13 @@ def get_scan_stats(filepath, map_grid=None):
     point_radec = np.zeros((n_det, n_samp, 3))
 
     tod[pixels] = tod_ind
+    temporal_mask[pixels] = temporal_mask_ind
     mask[pixels] = mask_ind
     mask_full[pixels] = mask_full_ind
     # n_nan[pixels] = n_nan_ind
     reason[pixels] = reason_ind
     acc[pixels] = acc_ind
+    acc_specific[pixels] = acc_ind_specific
     ampl[:, pixels, :, :] = ampl_ind
     tsys[pixels] = tsys_ind
     chi2[pixels] = chi2_ind
@@ -513,6 +534,9 @@ def get_scan_stats(filepath, map_grid=None):
  
     # acceptrate
     insert_data_in_array(data, acc, 'acceptrate')
+    
+    # acceptrate specific
+    insert_data_in_array(data, acc_specific, 'acceptrate_specific')
 
     # azimuth binning
     nbins = 15                                ##### azimuth bins
@@ -529,8 +553,10 @@ def get_scan_stats(filepath, map_grid=None):
                 freq_chi2 = np.zeros(n_freq)
                 for k in range(n_freq): 
                     if mask[i, j, k]:
-                        histsum, bins = np.histogram(az[i], bins=nbins, weights=(tod[i, j, k]/sigma0[i,j,k]))
-                        nhit = np.histogram(az[i], bins=nbins)[0]
+                        _az = az[i,temporal_mask[i]]
+                        _tod = tod[i,j,k,temporal_mask[i]]
+                        histsum, bins = np.histogram(_az, bins=nbins, weights=(_tod/sigma0[i,j,k]))
+                        nhit = np.histogram(_az, bins=nbins)[0]
                         normhist = histsum / nhit * np.sqrt(nhit)
 
                         # if i == 15 and j == 3 and k == 24:
@@ -612,6 +638,7 @@ def get_scan_stats(filepath, map_grid=None):
                 where = np.where(mask[i, j] > 0.0)
 
                 normtod = (tod[i,j]/sigma0[i,j,:,None])[where].flatten()
+                normtod = normtod[normtod != 0]
                 kurtosis[i,j] = stats.kurtosis(normtod)
                 skewness[i,j] = stats.skew(normtod)
 
@@ -1588,7 +1615,7 @@ if __name__ == "__main__":
     # params = get_params(param_file)
     #sys.path.append(params['accept_param_folder'])
     #accept_params = importlib.import_module(params['accept_param_folder'] + params['accept_mod_params'][:-3])
-    sys.path.append("/mn/stornext/d22/cmbco/comap/jonas/l2gen_python")  # TODO: Not use hard-coded path.
+    sys.path.append("/mn/stornext/d22/cmbco/comap/jonas/pipeline")  # TODO: Not use hard-coded path.
     from l2gen_argparser import parser
     params = parser.parse_args()
     if not params.runlist:
@@ -1680,10 +1707,10 @@ if __name__ == "__main__":
 
 
     # shutil.copyfile(param_file, param_file_copy)
-    shutil.copyfile(runlist_name, runlist_copy)
-    shutil.copyfile(jk_param_list_file, jk_def_copy)
-    shutil.copyfile(accept_params_name, accept_params_name_copy)
-    shutil.copyfile(stats_list_name, stats_list_name_copy)
+    #shutil.copyfile(runlist_name, runlist_copy)
+    #shutil.copyfile(jk_param_list_file, jk_def_copy)
+    #shutil.copyfile(accept_params_name, accept_params_name_copy)
+    #shutil.copyfile(stats_list_name, stats_list_name_copy)
   
 
         
